@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
@@ -32,6 +32,9 @@ from .models import WRITABLE_OPMODES, OpMode, PumpState
 
 _LOGGER = logging.getLogger(__name__)
 
+type IAqualinkConfigEntry = ConfigEntry["IAqualinkPumpCoordinator"]
+
+
 class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
     """Coordinate iAquaLink pump polling for all entities."""
 
@@ -39,9 +42,8 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
         self,
         hass: HomeAssistant,
         client: IAqualinkClient,
-        config_entry: ConfigEntry,
+        config_entry: IAqualinkConfigEntry,
     ) -> None:
-        self.config_entry = config_entry
         self.default_update_interval = timedelta(
             seconds=option_int(
                 config_entry.options,
@@ -66,6 +68,7 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
         super().__init__(
             hass,
             logger=_LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=self.default_update_interval,
         )
@@ -125,9 +128,15 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
         device = dr.async_get(hass).async_get(device_id)
         if device is None:
             return None
-        domain_entries = hass.data.get(DOMAIN, {})
-        entry_id = next(iter(device.config_entries & domain_entries.keys()), None)
-        return domain_entries.get(entry_id)
+        for entry_id in device.config_entries:
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if (
+                entry is not None
+                and entry.domain == DOMAIN
+                and entry.state is ConfigEntryState.LOADED
+            ):
+                return entry.runtime_data
+        return None
 
     def raise_if_service_mode(self, action) -> None:
         if self.data is None or self.data.opmode is not OpMode.SERVICE:

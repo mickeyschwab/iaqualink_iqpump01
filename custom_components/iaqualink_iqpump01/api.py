@@ -116,25 +116,26 @@ class IAqualinkClient:
             }
         if normalized_key == "email":
             return cls._mask_email(value)
-        if normalized_key in {"serial_number", "serialnumber"}:
+        if normalized_key in {"serial", "serial_number", "serialnumber"}:
             return cls._mask_suffix(value)
         if normalized_key in SENSITIVE_LOG_KEYS or any(
             part in normalized_key for part in SENSITIVE_LOG_KEY_PARTS
         ):
             return REDACTED
-        return cls._redact_for_log(value)
+        return cls.redact(value)
 
     @classmethod
-    def _redact_for_log(cls, value):
+    def redact(cls, value):
+        """Recursively mask sensitive fields for logs and diagnostics."""
         if isinstance(value, dict):
             return {key: cls._redact_value(key, item) for key, item in value.items()}
         if isinstance(value, list):
-            return [cls._redact_for_log(item) for item in value]
+            return [cls.redact(item) for item in value]
         return value
 
     def _log_response(self, label, status, text):
         try:
-            body = self._redact_for_log(json.loads(text))
+            body = self.redact(json.loads(text))
         except ValueError:
             _LOGGER.debug(
                 "[%s] Response status=%s body=<non-json, %s bytes>",

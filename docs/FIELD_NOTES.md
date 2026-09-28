@@ -194,9 +194,8 @@ This means the pump is likely in priming because `primingtimer=40`.
 
 The integration exposes this as a binary sensor:
 
-```text
-binary_sensor.pump_priming
-```
+a priming binary sensor with `priming_timer`, `priming_period`, and
+`priming_rpm` attributes.
 
 ## Polling And Refresh Behavior
 
@@ -222,13 +221,16 @@ Default values:
 
 ## Home Assistant Entities
 
-Main entities added during recent improvements:
+Entities use Home Assistant's `has_entity_name` naming, so entity IDs are
+derived from the device name (e.g. `select.iaqualink_iqpump01_pool_mode` for a
+pump named "Pool"). Entities:
 
-- `select.pump_mode` (replaces the former on/off switch, return-to-program
-  button, and operating mode sensor)
-- `number.pump_rpm_target`
-- `binary_sensor.pump_running` from `runstate`
-- `binary_sensor.pump_priming`
+- Mode select (replaces the former on/off switch, return-to-program button,
+  and operating mode sensor)
+- RPM target number
+- Custom speed duration number (config)
+- Running binary sensor from `runstate`
+- Priming binary sensor
 - Pump speed sensor from `motordata.speed`
 - Pump power sensor from `motordata.power`
 - Pump motor temperature sensor from `motordata.temperature`
@@ -238,6 +240,10 @@ Main entities added during recent improvements:
 
 The exact entity IDs can vary depending on Home Assistant's entity registry and
 user customizations.
+
+Raw pump state (redacted) is available from the integration's **Download
+diagnostics** instead of entity attributes, so SSIDs, serials, and similar
+values never land in the recorder database.
 
 ## Services
 
@@ -253,8 +259,8 @@ service takes its own duration instead, so one call can set both.
 - Target is the iQPump01 **device** (`device_id`, multiple allowed;
   `services.yaml` restricts the picker to `integration: iaqualink_iqpump01`
   devices). `IAqualinkPumpCoordinator.async_get_by_device_id(hass, device_id)`
-  resolves a device_id to its coordinator (device registry `config_entries`
-  intersected with `hass.data[DOMAIN]`) — this is a general-purpose resolver
+  resolves a device_id to its coordinator (the device's loaded config
+  entries' `runtime_data`) — this is a general-purpose resolver
   on the coordinator class, not something private to this service, so any
   future device-targeted service can reuse it. The handler in `__init__.py`
   resolves every targeted device first (raising if any is unrecognized), then

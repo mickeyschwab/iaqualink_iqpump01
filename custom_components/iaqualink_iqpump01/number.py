@@ -6,13 +6,13 @@ from homeassistant.components.number import (
     RestoreNumber,
 )
 from homeassistant.const import EntityCategory, UnitOfTime
-from .const import DOMAIN, MAX_CUSTOM_SPEED_TIMER_SECONDS
+from .const import MAX_CUSTOM_SPEED_TIMER_SECONDS
 from .entity import IAqualinkPumpEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [PumpRpmTargetNumber(coordinator), PumpCustomSpeedDurationNumber(coordinator)]
     )
@@ -21,7 +21,7 @@ class PumpRpmTargetNumber(IAqualinkPumpEntity, NumberEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         client = coordinator.client
-        self._attr_name = "Pump RPM Target"
+        self._attr_translation_key = "rpm_target"
         self._attr_unique_id = f"{client.serial}_rpm_target"
         # The pump only accepts RPM targets in increments of 25.
         self._attr_native_step = 25
@@ -62,7 +62,7 @@ class PumpCustomSpeedDurationNumber(IAqualinkPumpEntity, RestoreNumber):
 
     def __init__(self, coordinator):
         super().__init__(coordinator)
-        self._attr_name = "Pump Custom Speed Duration"
+        self._attr_translation_key = "custom_speed_duration"
         self._attr_unique_id = f"{coordinator.client.serial}_custom_speed_duration"
 
     async def async_added_to_hass(self):

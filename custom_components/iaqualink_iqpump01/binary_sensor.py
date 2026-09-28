@@ -5,14 +5,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
 )
 
-from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     async_add_entities(
         [PumpRunningBinarySensor(coordinator), PumpPrimingBinarySensor(coordinator)]
     )
@@ -23,7 +22,7 @@ class PumpRunningBinarySensor(IAqualinkPumpEntity, BinarySensorEntity):
 
     def __init__(self, coordinator):
         super().__init__(coordinator)
-        self._attr_name = "Pump Running"
+        self._attr_translation_key = "running"
         self._attr_unique_id = f"{coordinator.client.serial}_running"
 
     @property
@@ -35,7 +34,7 @@ class PumpPrimingBinarySensor(IAqualinkPumpEntity, BinarySensorEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         client = coordinator.client
-        self._attr_name = "Pump Priming"
+        self._attr_translation_key = "priming"
         self._attr_unique_id = f"{client.serial}_priming"
         self._attr_icon = "mdi:timer-sand"
 
