@@ -9,7 +9,7 @@ Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistan
 ## ✅ Features
 
 - Turn the pump on/off
-- Set custom target using percentage-based control with configurable manual duration
+- Set a custom target RPM (in the pump's native 25 RPM steps) with configurable manual duration
 - Return from custom/manual mode to the scheduled program with a dedicated button
 - Select the target iQPump01 controller when multiple pumps are linked to iAquaLink
 - Monitor current speed, power consumption, motor temperature, Wi-Fi status, etc.
@@ -42,7 +42,7 @@ No further configuration is needed.
 | Entity | Description |
 |--------|-------------|
 | `switch.pump_i2d` | Turn the pump on or off |
-| `number.pump_rpm_target_percentage` | Target RPM (%) — mapped to actual RPM using min/max range |
+| `number.pump_rpm_target` | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
 | `sensor.pump_power` | Power consumption (W) |
 | `sensor.pump_speed` | Current speed (RPM) |
 | `sensor.pump_operating_mode` | Operating mode (`program`, `custom`, `off`) |
