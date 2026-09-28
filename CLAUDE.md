@@ -31,7 +31,7 @@ python3 -m json.tool custom_components/iaqualink_iqpump01/manifest.json > /dev/n
 
 Bump the version in **both** `hacs.json` and
 `custom_components/iaqualink_iqpump01/manifest.json` together when releasing —
-they're expected to stay in sync (currently `1.0.18`).
+they're expected to stay in sync (currently `2.0.0`).
 
 ## Architecture
 
