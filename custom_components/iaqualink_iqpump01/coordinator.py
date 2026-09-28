@@ -145,14 +145,8 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
         )
         raise HomeAssistantError(SERVICE_MODE_REMOTE_CONTROL_ERROR)
 
-    async def async_set_custom_speed(self, percentage, duration_seconds) -> None:
-        """Set a custom speed via percentage (used by the number entity)."""
-        rpm_min, rpm_max = rpm_limits(self.data)
-        rpm = int(rpm_min + (percentage / 100) * (rpm_max - rpm_min))
-        await self._async_write_custom_speed(rpm, duration_seconds)
-
     async def async_set_custom_speed_rpm(self, rpm, duration_seconds) -> None:
-        """Set a custom speed via raw RPM (used by the set_custom_speed service)."""
+        """Set a custom speed via raw RPM (used by the number entity and service)."""
         rpm_min, rpm_max = rpm_limits(self.data)
         if not rpm_min <= rpm <= rpm_max:
             raise HomeAssistantError(

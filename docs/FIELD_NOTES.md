@@ -119,23 +119,20 @@ Related fields:
 - `customspeedtimer`: remaining custom/manual timer seconds, or `-1` when inactive.
 - `motordata.speed`: actual motor speed, which can lag behind target changes.
 
-## RPM And Percentage Control
+## RPM Control
 
-Home Assistant number entities are exposed as percentage values from `0` to `100`.
-The integration maps this range to the controller RPM range:
+The Home Assistant number entity is expressed directly in RPM, matching what the
+iAquaLink app displays — there is no percentage mapping:
 
 - Minimum from `globalrpmmin`, fallback `1000`.
 - Maximum from `globalrpmmax`, fallback `3450`.
-- Requested RPM is rounded to the nearest 25 RPM.
+- Step is 25 RPM; requested RPM is also rounded to the nearest 25 RPM before
+  writing, since the controller only accepts targets in 25 RPM increments.
+- The displayed value is the controller-reported `rpmtarget`.
 
-Example with `globalrpmmin=1000` and `globalrpmmax=3450`:
-
-| Percent | RPM |
-| --- | --- |
-| `0` | `1000` |
-| `20` | about `1500` |
-| `50` | about `2225` |
-| `100` | `3450` |
+Earlier versions exposed a `0–100%` number. That mapping truncated in both
+directions, so reading a value and setting it back could drift the RPM (e.g.
+`1975` RPM displayed as `39%`, which wrote back as `1950`). It was removed.
 
 ## Timers
 
@@ -227,7 +224,7 @@ Default values:
 
 Main entities added during recent improvements:
 
-- `number.pump_rpm_target_percentage`
+- `number.pump_rpm_target`
 - `button.pump_return_to_program`
 - `binary_sensor.pump_priming`
 - Pump speed sensor from `motordata.speed`
@@ -246,9 +243,8 @@ user customizations.
 `__init__.py`'s `async_setup`, not tied to any single entity platform) that
 sets a custom RPM target for a specific duration in one call, matching the
 "set X rpm for X time" control in the iAquaLink app. The `number` entity's
-`async_set_value` only ever writes a percentage-mapped RPM using the
-options-flow preset duration; this service is the only way to set an
-arbitrary RPM and an arbitrary duration together.
+`async_set_value` always uses the options-flow preset duration; this service
+is the only way to set an RPM and an arbitrary duration together.
 
 - Fields: `rpm` (raw RPM, matching what the iAquaLink app displays) and
   `duration` (HA duration selector, day component disabled).
@@ -271,10 +267,10 @@ arbitrary RPM and an arbitrary duration together.
   same ceiling the app enforces) before any write happens.
 - The actual write sequence (and the service-mode guard) live in
   `IAqualinkPumpCoordinator._async_write_custom_speed(rpm, duration_seconds)`,
-  which rounds to the nearest 25 RPM the controller accepts. Both
-  `async_set_custom_speed(percentage, ...)` (used by the number entity) and
-  `async_set_custom_speed_rpm(rpm, ...)` (used by the service) funnel into
-  it — extend that helper, don't duplicate the three-write sequence.
+  which rounds to the nearest 25 RPM the controller accepts. Both the
+  number entity and the service call `async_set_custom_speed_rpm(rpm, ...)`,
+  which validates the range and funnels into it — extend that helper, don't
+  duplicate the three-write sequence.
 
 ## Config Flow And Options Flow
 
