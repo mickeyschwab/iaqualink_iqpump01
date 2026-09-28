@@ -1,6 +1,6 @@
 import logging
 from homeassistant.components.number import NumberEntity
-from .const import DOMAIN, rpm_limits
+from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,21 +21,15 @@ class PumpRpmTargetNumber(IAqualinkPumpEntity, NumberEntity):
 
     @property
     def native_min_value(self):
-        rpm_min, _ = rpm_limits(self.coordinator.data)
-        return rpm_min
+        return self.coordinator.data.rpm_min
 
     @property
     def native_max_value(self):
-        _, rpm_max = rpm_limits(self.coordinator.data)
-        return rpm_max
+        return self.coordinator.data.rpm_max
 
     @property
     def native_value(self):
-        data = self.coordinator.data or {}
-        try:
-            return int(data["rpmtarget"])
-        except (KeyError, TypeError, ValueError):
-            return None
+        return self.coordinator.data.rpm_target
 
     async def async_set_value(self, value):
         timer_seconds = self.coordinator.custom_speed_timer_seconds()
