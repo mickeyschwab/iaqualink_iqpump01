@@ -21,6 +21,8 @@ Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistan
 
 ## 🛠 Installation via HACS (recommended)
 
+Requires Home Assistant 2024.11 or newer.
+
 1. In HACS > Integrations, click the 3-dot menu > Custom Repositories
 2. Add this repository: `https://github.com/CLARENNE-Q/iaqualink_iqpump01`
 3. Choose category: Integration
