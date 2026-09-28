@@ -38,11 +38,15 @@
     "step": {
       "init": {
         "title": "Options iAquaLink iQPump01",
-        "description": "Ajustez le comportement du polling.",
+        "description": "Duree par defaut de la vitesse personnalisee et comportement du polling.",
         "data": {
+          "custom_speed_duration_minutes": "Duree par defaut de la vitesse personnalisee",
           "update_interval_seconds": "Intervalle de polling normal",
           "fast_update_interval_seconds": "Intervalle de polling rapide apres changement RPM",
           "fast_refresh_duration_seconds": "Duree du polling rapide apres changement RPM"
+        },
+        "data_description": {
+          "custom_speed_duration_minutes": "Utilisee par la consigne RPM et le mode personnalise. L'action set_custom_speed prend sa propre duree."
         }
       }
     }
@@ -65,9 +69,6 @@
     "number": {
       "rpm_target": {
         "name": "Consigne RPM"
-      },
-      "custom_speed_duration": {
-        "name": "Duree de vitesse personnalisee"
       }
     },
     "binary_sensor": {

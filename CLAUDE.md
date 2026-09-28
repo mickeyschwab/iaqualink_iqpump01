@@ -114,13 +114,18 @@ oldest release the test suite has been run against — it's needed for
    `_abort_if_unique_id_configured`). A `reauth_confirm` step handles
    `ConfigEntryAuthFailed` (raised by setup and the coordinator on 401/403)
    by asking for the current password and reloading the entry. The options
-   flow tunes the three polling knobs in `const.py` (normal interval, fast
-   interval, fast duration) and triggers a reload on change. The custom speed
-   duration is *not* an option: it's a `RestoreNumber` config entity in
-   `number.py` (minutes, 1–1439) that writes
-   `coordinator.custom_speed_duration_seconds`, so it can change at runtime
-   without a reload. The legacy `custom_speed_timer_seconds` option only
-   seeds its first value, which is why the migration below keeps it.
+   flow sets the default custom speed duration and the three polling knobs in
+   `const.py` (normal interval, fast interval, fast duration), and triggers a
+   reload on change. The duration is stored in seconds
+   (`custom_speed_timer_seconds`, the same key 1.x used) but edited in
+   minutes (`custom_speed_duration_minutes`, 1–1439, converted on save).
+
+   Duration is deliberately *not* an entity. It's an argument to "run at this
+   speed", like `transition` on `light.turn_on`, not pump state. A persistent
+   entity made setting order matter and did nothing when changed mid-run. The
+   RPM number and `custom` mode use the options default
+   (`coordinator.default_custom_speed_duration()`); `set_custom_speed` takes
+   an explicit duration.
 
    Config entries are `VERSION = 2`. `async_migrate_entry` in `__init__.py`
    upgrades 1.x entries by removing registry entries for entities deleted in
@@ -138,8 +143,7 @@ oldest release the test suite has been run against — it's needed for
    device selector, not a `target`, because HA doesn't allow device filters on
    service targets — `target: device_id:` in YAML still works since HA merges
    target into the call data), which lets one call set a raw RPM target
-   *and* a duration together in a single call, independent of the duration
-   entity. The
+   *and* a duration together, overriding the options default. The
    handler resolves each targeted `device_id` via
    `IAqualinkPumpCoordinator.async_get_by_device_id()` (walks the device's
    loaded config entries to their `runtime_data`; a reusable staticmethod, not one-off logic — the resolution belongs on the coordinator

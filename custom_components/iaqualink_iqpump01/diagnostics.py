@@ -20,6 +20,5 @@ async def async_get_config_entry_diagnostics(
         },
         "device": IAqualinkClient.redact(coordinator.client.device or {}),
         "alldata": IAqualinkClient.redact(coordinator.data.raw),
-        "custom_speed_duration_seconds": coordinator.custom_speed_duration_seconds,
         "update_interval_seconds": coordinator.update_interval.total_seconds(),
     }

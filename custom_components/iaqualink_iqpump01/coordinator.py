@@ -74,12 +74,6 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
         )
         self.client = client
         self._fast_refresh_unsub = None
-        # Owned by the custom speed duration number entity, which restores it.
-        self.custom_speed_duration_seconds = option_int(
-            config_entry.options,
-            CONF_CUSTOM_SPEED_TIMER_SECONDS,
-            DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
-        )
 
     async def _async_update_data(self):
         try:
@@ -138,6 +132,18 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
                 return entry.runtime_data
         return None
 
+    def default_custom_speed_duration(self) -> int:
+        """Duration in seconds for one-tap controls (RPM number, custom mode).
+
+        Duration is an argument to "run at this speed", not pump state, so it's
+        an options-flow default; set_custom_speed takes an explicit one.
+        """
+        return option_int(
+            self.config_entry.options,
+            CONF_CUSTOM_SPEED_TIMER_SECONDS,
+            DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
+        )
+
     def raise_if_service_mode(self, action) -> None:
         if self.data is None or self.data.opmode is not OpMode.SERVICE:
             return
@@ -157,7 +163,7 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
             if rpm is None:
                 raise HomeAssistantError("Pump has no saved custom speed to resume.")
             await self.async_set_custom_speed_rpm(
-                rpm, self.custom_speed_duration_seconds
+                rpm, self.default_custom_speed_duration()
             )
             return
 

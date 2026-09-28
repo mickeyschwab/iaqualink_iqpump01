@@ -48,7 +48,6 @@ Entity IDs are derived from the pump's device name, e.g.
 |--------|-------------|
 | Mode (select) | `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
 | RPM target (number) | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
-| Custom speed duration (number) | How long a custom speed runs before returning to the schedule (minutes, up to 23h59) |
 | Running (binary sensor) | Whether the motor is running |
 | Priming (binary sensor) | Whether the pump is priming |
 | Power (sensor) | Power consumption (W) |

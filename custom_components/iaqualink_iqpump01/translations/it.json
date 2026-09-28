@@ -38,11 +38,15 @@
     "step": {
       "init": {
         "title": "iAquaLink iQPump01 Options",
-        "description": "Tune polling behavior.",
+        "description": "Default custom speed duration and polling behavior.",
         "data": {
+          "custom_speed_duration_minutes": "Default custom speed duration",
           "update_interval_seconds": "Normal polling interval",
           "fast_update_interval_seconds": "Fast polling interval after RPM change",
           "fast_refresh_duration_seconds": "Fast polling duration after RPM change"
+        },
+        "data_description": {
+          "custom_speed_duration_minutes": "Used by the RPM target and by selecting custom mode. The set_custom_speed action takes its own duration."
         }
       }
     }
@@ -65,9 +69,6 @@
     "number": {
       "rpm_target": {
         "name": "RPM target"
-      },
-      "custom_speed_duration": {
-        "name": "Custom speed duration"
       }
     },
     "binary_sensor": {

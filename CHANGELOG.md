@@ -22,7 +22,6 @@ updated by hand.
 | `button.pump_return_to_program` | **Mode** select → `auto` |
 | `number.pump_rpm_target_percentage` (0–100 %) | **RPM target** number, in RPM (the pump's own min/max, 25 RPM steps) |
 | `sensor.pump_operating_mode` | The **Mode** select's state |
-| Options → "Manual speed duration" | **Custom speed duration** number entity (minutes, up to 23 h 59) |
 | Attributes on `switch.pump_i2d` | **Motor temperature** sensor; firmware version and serial on the device page; priming details on the **Priming** sensor; everything else via **Download diagnostics** |
 
 Other breaking changes:
@@ -49,10 +48,11 @@ Other breaking changes:
 - **RPM target number** with the pump's real range (`globalrpmmin` to
   `globalrpmmax`) and 25 RPM steps. It shows exactly what the iAquaLink app
   shows.
-- **Custom speed duration** as an entity, so it can be changed from a
-  dashboard or automation without reloading the integration. Your old
-  options-flow value carries over as its starting value, and it's remembered
-  across restarts.
+- **Any custom speed duration.** The options setting is now a minutes box
+  (up to 23 h 59, matching the iAquaLink app) instead of five presets. It's
+  the default for the RPM target and for selecting `custom`; your existing
+  setting carries over. For a one-off duration, use the `set_custom_speed`
+  action.
 - **Running** binary sensor (from `runstate`) and **Motor temperature**
   sensor.
 - **Diagnostics download** with redacted pump state, for troubleshooting.
@@ -137,4 +137,5 @@ current Home Assistant rejects the old definition. Existing YAML using
    `min + percent / 100 × (max − min)`, rounded to 25. With the default
    1000–3450 RPM range, 50 % is 2225 RPM. Your pump's actual range is shown
    on the RPM target entity.
-5. Check that **Custom speed duration** holds the duration you expect.
+5. Check that the integration's options show the default custom speed
+   duration you expect.

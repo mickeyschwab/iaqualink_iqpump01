@@ -1,13 +1,10 @@
 """Speed, duration, and mode writes."""
 import pytest
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import State
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
-    mock_restore_cache_with_extra_data,
 )
 
 from .conftest import DOMAIN, ENTRY_DATA, SERIAL, entity_id
@@ -65,34 +62,8 @@ async def test_service_mode_blocks_writes(hass, entry, pump):
     assert pump.writes == []
 
 
-async def test_duration_entity_drives_writes(hass, entry, pump):
-    duration = entity_id(hass, "number", "custom_speed_duration")
-    assert hass.states.get(duration).state == "360"
-    await hass.services.async_call("number", "set_value", {"entity_id": duration, "value": 90}, blocking=True)
-    assert hass.states.get(duration).state == "90"
-    assert pump.writes == []  # local setting, no pump write
-    await hass.services.async_call(
-        "number", "set_value", {"entity_id": entity_id(hass, "number", "rpm_target"), "value": 1500}, blocking=True
-    )
-    assert pump.writes[-1] == ("customspeedtimer", "5400")
 
 
-async def test_duration_restored(hass, pump):
-    mock_restore_cache_with_extra_data(
-        hass,
-        [(State("number.iaqualink_iqpump01_pool_pump_custom_speed_duration", "45"),
-          {"native_value": 45, "native_min_value": 1, "native_max_value": 1439, "native_step": 1, "native_unit_of_measurement": "min"})],
-    )
-    er.async_get(hass).async_get_or_create(
-        "number", DOMAIN, f"{SERIAL}_custom_speed_duration",
-        suggested_object_id="iaqualink_iqpump01_pool_pump_custom_speed_duration",
-    )
-    entry = MockConfigEntry(domain=DOMAIN, unique_id=SERIAL, version=2, data=ENTRY_DATA)
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    assert hass.states.get(entity_id(hass, "number", "custom_speed_duration")).state == "45"
-    assert entry.runtime_data.custom_speed_duration_seconds == 2700
 
 
 async def test_mode_select(hass, entry, pump):
@@ -134,3 +105,46 @@ async def test_service_mode_select(hass, entry, pump):
     with pytest.raises(HomeAssistantError):
         await hass.services.async_call("select", "select_option", {"entity_id": mode, "option": "auto"}, blocking=True)
     assert pump.writes == []
+
+
+async def test_default_duration_from_options(hass, entry, pump):
+    """Duration is a command argument; one-tap controls use the options default."""
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    schema = result["data_schema"].schema
+    defaults = {str(key): key.default() for key in schema}
+    assert defaults["custom_speed_duration_minutes"] == 360
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "custom_speed_duration_minutes": 90,
+            "update_interval_seconds": 60,
+            "fast_update_interval_seconds": 10,
+            "fast_refresh_duration_seconds": 180,
+        },
+    )
+    await hass.async_block_till_done()  # options change reloads the entry
+    assert entry.options["custom_speed_timer_seconds"] == 5400
+    assert "custom_speed_duration_minutes" not in entry.options
+
+    await hass.services.async_call(
+        "number", "set_value", {"entity_id": entity_id(hass, "number", "rpm_target"), "value": 1500}, blocking=True
+    )
+    assert pump.writes == [("opmode", "1"), ("customspeedrpm", "1500"), ("customspeedtimer", "5400")]
+
+
+async def test_legacy_string_duration_option(hass, pump):
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=SERIAL, version=2, data=ENTRY_DATA,
+        options={"custom_speed_timer_seconds": "3600"},
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    defaults = {str(key): key.default() for key in result["data_schema"].schema}
+    assert defaults["custom_speed_duration_minutes"] == 60
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": entity_id(hass, "select", "mode"), "option": "custom"}, blocking=True
+    )
+    assert pump.writes[-1] == ("customspeedtimer", "3600")

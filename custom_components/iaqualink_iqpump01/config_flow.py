@@ -6,13 +6,17 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 from .const import (
     CONF_SERIAL,
+    CONF_CUSTOM_SPEED_DURATION_MINUTES,
+    CONF_CUSTOM_SPEED_TIMER_SECONDS,
     CONF_FAST_REFRESH_DURATION_SECONDS,
     CONF_FAST_UPDATE_INTERVAL_SECONDS,
     CONF_UPDATE_INTERVAL_SECONDS,
+    DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
     DEFAULT_FAST_REFRESH_DURATION_SECONDS,
     DEFAULT_FAST_UPDATE_INTERVAL_SECONDS,
     DEFAULT_UPDATE_INTERVAL_SECONDS,
     DOMAIN,
+    MAX_CUSTOM_SPEED_TIMER_SECONDS,
     option_int,
 )
 from .api import (
@@ -33,6 +37,23 @@ OPTION_INT_KEYS = (
 
 def _options_schema(options):
     return vol.Schema({
+        # Stored in seconds, edited in minutes (same 23h59 cap as the app).
+        vol.Required(
+            CONF_CUSTOM_SPEED_DURATION_MINUTES,
+            default=option_int(
+                options,
+                CONF_CUSTOM_SPEED_TIMER_SECONDS,
+                DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
+            ) // 60,
+        ): selector.NumberSelector(
+            selector.NumberSelectorConfig(
+                min=1,
+                max=MAX_CUSTOM_SPEED_TIMER_SECONDS // 60,
+                step=1,
+                unit_of_measurement="min",
+                mode=selector.NumberSelectorMode.BOX,
+            )
+        ),
         vol.Required(
             CONF_UPDATE_INTERVAL_SECONDS,
             default=option_int(
@@ -252,6 +273,9 @@ class AqualinkOptionsFlow(config_entries.OptionsFlow):
             options = dict(user_input)
             for key in OPTION_INT_KEYS:
                 options[key] = int(options[key])
+            options[CONF_CUSTOM_SPEED_TIMER_SECONDS] = (
+                int(options.pop(CONF_CUSTOM_SPEED_DURATION_MINUTES)) * 60
+            )
             return self.async_create_entry(title="", data=options)
 
         return self.async_show_form(

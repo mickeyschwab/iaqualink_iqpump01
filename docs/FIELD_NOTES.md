@@ -152,9 +152,11 @@ Custom speed timer:
 - `customspeedtimer=-1`: no active custom speed timer.
 - `customspeedtimer>=0`: active custom speed timer.
 
-The integration's custom speed duration is a Home Assistant number entity in
-minutes (`1`–`1439`, default 6 h), restored across restarts. The iAquaLink
-mobile app appears to allow up to approximately `23 h 59`, so that's the cap.
+How long a custom speed runs is an argument to the command, not pump state.
+The `set_custom_speed` action takes it explicitly. The RPM number entity and
+selecting `custom` mode use a default set in the integration's options, in
+minutes (`1`–`1439`, default 6 h). The iAquaLink mobile app appears to allow
+up to approximately `23 h 59`, so that's the cap.
 
 ## Priming
 
@@ -228,7 +230,6 @@ pump named "Pool"). Entities:
 - Mode select (replaces the former on/off switch, return-to-program button,
   and operating mode sensor)
 - RPM target number
-- Custom speed duration number (config)
 - Running binary sensor from `runstate`
 - Priming binary sensor
 - Pump speed sensor from `motordata.speed`
@@ -251,7 +252,7 @@ values never land in the recorder database.
 `__init__.py`'s `async_setup`, not tied to any single entity platform) that
 sets a custom RPM target for a specific duration in one call, matching the
 "set X rpm for X time" control in the iAquaLink app. The RPM number
-entity and selecting `custom` mode use the custom speed duration entity; this
+entity and selecting `custom` mode use the options-flow default duration; this
 service takes its own duration instead, so one call can set both.
 
 - Fields: `rpm` (raw RPM, matching what the iAquaLink app displays) and
@@ -294,6 +295,7 @@ Config flow behavior:
 
 Options flow exposes:
 
+- Default custom speed duration (minutes).
 - Normal polling interval.
 - Fast polling interval after RPM change.
 - Fast polling duration after RPM change.
