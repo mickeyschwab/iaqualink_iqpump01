@@ -30,6 +30,7 @@ from .const import (
     option_int,
     rpm_limits,
 )
+from .models import WRITABLE_OPMODES, OpMode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -141,6 +142,31 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
             OPMODE_SERVICE,
         )
         raise HomeAssistantError(SERVICE_MODE_REMOTE_CONTROL_ERROR)
+
+    async def async_set_opmode(self, opmode: OpMode) -> None:
+        """Switch operating mode (used by the mode select)."""
+        if opmode not in WRITABLE_OPMODES:
+            raise HomeAssistantError(
+                f"Mode {opmode.name.lower()} can't be set remotely."
+            )
+        if opmode is OpMode.CUSTOM:
+            # opmode=1 alone may be ignored; resume the pump's saved custom
+            # speed through the full custom-speed sequence instead.
+            data = self.data or {}
+            rpm = data.get("customspeedrpm") or data.get("rpmtarget")
+            await self.async_set_custom_speed_rpm(
+                int(rpm), self.custom_speed_timer_seconds()
+            )
+            return
+
+        self.raise_if_service_mode("Set mode command")
+        try:
+            await self.client.set_opmode(opmode)
+        except IAqualinkError as err:
+            raise HomeAssistantError(f"Unable to set pump mode: {err}") from err
+
+        self.enable_fast_refresh()
+        await self.async_request_refresh()
 
     async def async_set_custom_speed_rpm(self, rpm, duration_seconds) -> None:
         """Set a custom speed via raw RPM (used by the number entity and service)."""

@@ -14,3 +14,7 @@ class OpMode(IntEnum):
     TIMED_STOP = 5
     # iAquaLink reports "remote control not authorized"; the pump UI shows off.
     SERVICE = 7
+
+
+# Modes with confirmed remote writes (see docs/FIELD_NOTES.md).
+WRITABLE_OPMODES = (OpMode.AUTO, OpMode.CUSTOM, OpMode.OFF)

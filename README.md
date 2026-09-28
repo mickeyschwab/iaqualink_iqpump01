@@ -8,16 +8,14 @@ Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistan
 
 ## ✅ Features
 
-- Turn the pump on/off
+- Switch mode between auto (scheduled program), custom, and off from a single select
 - Set a custom target RPM (in the pump's native 25 RPM steps) with configurable manual duration
-- Return from custom/manual mode to the scheduled program with a dedicated button
 - Select the target iQPump01 controller when multiple pumps are linked to iAquaLink
-- Monitor current speed, power consumption, motor temperature, Wi-Fi status, etc.
-- Expose priming status as a dedicated binary sensor
-- Expose operating mode, target RPM, custom RPM, and custom speed timer sensors
+- Monitor current speed, power consumption, and motor temperature
+- Expose running and priming status as binary sensors
+- Expose target RPM, custom RPM, and custom speed timer sensors
 - Robust setup with duplicate detection, auth retry handling, and clear no-device errors
 - Configurable faster refresh after speed changes to track real RPM ramp-up
-- View advanced attributes like firmware version, priming status, min/max RPM, serial number
 - Configurable auto-refresh pump data polling
 - HACS compatible for easy installation
 
@@ -41,15 +39,16 @@ No further configuration is needed.
 
 | Entity | Description |
 |--------|-------------|
-| `switch.pump_i2d` | Turn the pump on or off |
+| `select.pump_mode` | Operating mode: `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
 | `number.pump_rpm_target` | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
+| `binary_sensor.pump_running` | Whether the motor is running |
+| `binary_sensor.pump_priming` | Whether the pump is priming |
 | `sensor.pump_power` | Power consumption (W) |
 | `sensor.pump_speed` | Current speed (RPM) |
-| `sensor.pump_operating_mode` | Operating mode (`program`, `custom`, `off`) |
+| `sensor.pump_motor_temperature` | Motor temperature |
 | `sensor.pump_target_rpm` | Requested target RPM |
 | `sensor.pump_custom_speed_rpm` | Custom speed RPM |
 | `sensor.pump_custom_speed_timer` | Remaining custom speed timer (seconds) |
-| ... | Additional attributes on switch.pump_i2d such as temperature, runstate, firmware, priming, max/min-speed, serial, Wi-Fi, and more |
 
 ## 🧰 Services
 
