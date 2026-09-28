@@ -2,12 +2,13 @@
   "domain": "iaqualink_iqpump01",
   "name": "iAquaLink iQPump01",
   "codeowners": [
-    "@CLARENNE-Q"
+    "@mickeyschwab"
   ],
   "config_flow": true,
-  "documentation": "https://quentin.clarenne.name/",
+  "documentation": "https://github.com/mickeyschwab/iaqualink_iqpump01",
   "integration_type": "device",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/mickeyschwab/iaqualink_iqpump01/issues",
   "requirements": [],
   "version": "2.0.0"
 }
