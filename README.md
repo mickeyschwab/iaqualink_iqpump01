@@ -1,90 +1,153 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01)
 ![version](https://img.shields.io/badge/version-2.0.0-blue)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/clarenneq)
+[![CI](https://github.com/mickeyschwab/iaqualink_iqpump01/actions/workflows/ci.yml/badge.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01/actions/workflows/ci.yml)
 
 # iAquaLink iQPump01
 
-Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistant — no third-party libraries, using the native iAquaLink/Zodiac API.
+Control a Jandy/Zodiac iQPump01 variable-speed pool pump from Home Assistant
+through the native iAquaLink cloud API, with no third-party pool libraries.
 
-This is a fork of [CLARENNE-Q/iaqualink_iqpump01](https://github.com/CLARENNE-Q/iaqualink_iqpump01) with an RPM-native, mode-select redesign. See [CHANGELOG.md](CHANGELOG.md) for what changed in 2.0.0.
+> **This is a fork of
+> [CLARENNE-Q/iaqualink_iqpump01](https://github.com/CLARENNE-Q/iaqualink_iqpump01)
+> by [@CLARENNE-Q](https://github.com/CLARENNE-Q).** The original integration,
+> including the reverse-engineered iAquaLink API client and the device
+> behavior documented in [`docs/FIELD_NOTES.md`](docs/FIELD_NOTES.md), is
+> their work. This fork redesigns how the pump is modeled in Home Assistant
+> (see [What's different in this fork](#whats-different-in-this-fork)). See
+> [Credits](#credits).
 
-## ✅ Features
+## Features
 
-- Switch mode between auto (scheduled program), custom, and off from a single select
-- Set a custom target RPM (in the pump's native 25 RPM steps) for a duration you set from a number entity
-- Select the target iQPump01 controller when multiple pumps are linked to iAquaLink
-- Monitor current speed, power consumption, and motor temperature
-- Expose running and priming status as binary sensors
-- Expose target RPM, custom RPM, and custom speed timer sensors
-- Robust setup with duplicate detection, auth retry handling, and clear no-device errors
-- Configurable faster refresh after speed changes to track real RPM ramp-up
-- Configurable auto-refresh pump data polling
-- HACS compatible for easy installation
+- **Mode** control: auto (the pump's schedule), custom, or off, from a single
+  select.
+- **Custom speed in RPM**: the pump's real range in 25 RPM steps, exactly as
+  the iAquaLink app shows it.
+- **`set_custom_speed` action** to run a given RPM for a given duration in
+  one call, for automations and scripts.
+- Sensors for speed, power, motor temperature, target and custom RPM, and
+  time remaining on a custom speed.
+- Running and priming binary sensors.
+- Faster polling for a few minutes after a change, so you can watch the motor
+  ramp up.
+- Multiple pumps on one iAquaLink account, one integration entry per pump.
+- Automatic re-authentication prompt when iAquaLink rejects your credentials.
+- Redacted diagnostics download for troubleshooting.
 
-## 🛠 Installation via HACS (recommended)
+## What's different in this fork
 
-Requires Home Assistant 2024.11 or newer.
+Version 2.0.0 of this fork reworks the upstream 1.x integration:
 
-1. In HACS > Integrations, click the 3-dot menu > Custom Repositories
-2. Add this repository: `https://github.com/mickeyschwab/iaqualink_iqpump01`
-3. Choose category: Integration
-4. Install the integration and restart Home Assistant
-5. Go to **Settings > Devices & Services > Add Integration**, search for `iAquaLink iQPump01`
+- **Speed is always in RPM.** The upstream 0–100 % control could drift when a
+  value was read and written back (1975 RPM → 39 % → 1950 RPM).
+- **One mode select** replaces the on/off switch, the return-to-program button,
+  and the operating mode sensor. The old switch's "on" meant "return to
+  schedule", which didn't match its state (whether the motor was running).
+- **Re-authentication works.** Upstream had no reauth step, so an expired or
+  changed password left the integration broken until it was re-added.
+- **Wi-Fi SSID and serial number no longer land in the recorder database** as
+  entity attributes; they're available through redacted diagnostics instead.
+- Async HTTP client, typed pump state, a test suite, and CI.
 
-## ⚙️ Configuration
+**These are breaking changes.** [CHANGELOG.md](CHANGELOG.md) has the full list,
+a table mapping old entities to new ones, and upgrade steps.
 
-During setup, you'll need to provide:
-- Your iAquaLink email
-- Your iAquaLink password
+## Requirements
 
-No further configuration is needed.
+- Home Assistant 2024.11 or newer
+- An iAquaLink account with at least one iQPump01 controller (`i2d` device)
 
-## 📈 Entities created
+## Installation (HACS)
+
+1. In HACS, open the ⋮ menu → **Custom repositories**.
+2. Add `https://github.com/mickeyschwab/iaqualink_iqpump01` with type
+   **Integration**.
+3. Download **iAquaLink iQPump01** and restart Home Assistant.
+4. Go to **Settings → Devices & services → Add integration** and search for
+   **iAquaLink iQPump01**.
+
+If you're switching from the upstream repository, remove it in HACS first
+(this keeps your configured integration), **back up Home Assistant**, then
+follow the upgrade steps in [CHANGELOG.md](CHANGELOG.md#upgrading-from-1x).
+Upgrading from 1.x can't be undone except by restoring that backup.
+
+## Configuration
+
+Setup asks for your iAquaLink email and password. If the account has more
+than one iQPump01, you'll pick which one to add; add the integration again for
+each additional pump.
+
+**Options** (Settings → Devices & services → iAquaLink iQPump01 → Configure):
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| Default custom speed duration | 6 h (360 min) | How long a custom speed runs when set from the RPM target or by selecting `custom`, before the pump returns to its schedule. 1 min to 23 h 59. |
+| Normal polling interval | 60 s | How often pump state is read (15–300 s). |
+| Fast polling interval | 10 s | Polling interval right after a speed or mode change (5–60 s). |
+| Fast polling duration | 180 s | How long fast polling lasts after a change (30–600 s). |
+
+Polling is cloud-based; the guardrails on these values help avoid iAquaLink
+rate limiting.
+
+## Entities
 
 Entity IDs are derived from the pump's device name, e.g.
 `select.iaqualink_iqpump01_pool_mode` for a pump named "Pool".
 
 | Entity | Description |
 |--------|-------------|
-| Mode (select) | `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
-| RPM target (number) | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
-| Running (binary sensor) | Whether the motor is running |
-| Priming (binary sensor) | Whether the pump is priming |
-| Power (sensor) | Power consumption (W) |
-| Speed (sensor) | Current speed (RPM) |
-| Motor temperature (sensor) | Motor temperature |
-| Target RPM (sensor) | Requested target RPM |
-| Custom speed RPM (sensor) | Custom speed RPM |
-| Custom speed time remaining (sensor) | Remaining custom speed timer (seconds, `-1` when inactive) |
+| Mode (select) | `auto`, `custom`, `off`. While the pump is in quick clean, timed run, timed stop, or service mode, that mode is shown too, but it can't be selected remotely. |
+| RPM target (number) | Sets a custom speed in RPM for the default duration. Bounded by the pump's own minimum and maximum. |
+| Running (binary sensor) | Whether the motor is running. |
+| Priming (binary sensor) | Whether the pump is priming, with priming timer, period, and RPM as attributes. |
+| Speed (sensor) | Actual motor speed (RPM). Lags behind the target while ramping. |
+| Power (sensor) | Power draw (W). |
+| Motor temperature (sensor) | Motor temperature as reported by the pump. |
+| Target RPM (sensor) | The speed the pump is currently aiming for. |
+| Custom speed RPM (sensor) | The saved custom speed. |
+| Custom speed time remaining (sensor) | Seconds left on the current custom speed; `-1` when none is running. |
 
-Firmware version and serial number appear on the device page. Raw pump state
-(redacted) is available via **Download diagnostics** on the integration.
+Firmware version and serial number are shown on the device page.
 
-## 🧰 Services
+## Controlling the pump
 
-| Service | Description |
-|---------|-------------|
-| `iaqualink_iqpump01.set_custom_speed` | Set the pump to a custom `rpm` for a specific `duration` (up to 23h59). Target the iQPump01 device. |
+**From a dashboard**, add the Mode select and the RPM target. Setting an RPM
+runs that speed for the default duration from the options, then the pump
+returns to its schedule. Selecting `custom` resumes the saved custom speed for
+the same default duration.
 
+**From automations and scripts**, use the `set_custom_speed` action, which
+takes the duration explicitly:
 
-## 📌 Current limitations
+```yaml
+action: iaqualink_iqpump01.set_custom_speed
+data:
+  device_id: <your pump's device ID>
+  rpm: 2800
+  duration: "02:00:00"
+```
 
-- Only `i2d` controllers (iQPump01) are supported; other iAquaLink equipment families are not supported yet.
-- Requires a valid iAquaLink account with at least one registered iQPump01 controller.
-- Multi-pump is supported through multiple integration entries (one per serial), but there is no global cross-pump orchestration view/feature yet.
-- Polling is configurable:
-  - **Normal**: 60s by default (adjustable from 15 to 300s in options),
-  - **Fast refresh** after speed changes: 10s by default for 3 minutes (adjustable from 5 to 60s and 30 to 600s).
-  These guardrails help reduce cloud API rate-limiting risk.
+`rpm` must be within the pump's range; out-of-range values are rejected rather
+than clamped. `duration` can be up to 23 h 59. To return to the schedule early,
+set the Mode select to `auto`.
 
-## 🐞 Debugging
+If the pump is in service mode (remote control locked at the pump), every
+control raises an error instead of silently doing nothing.
 
-If you have another pump model and it doesn’t work out of the box, I may be able to investigate further **if you share the full raw API payloads** returned by your device.
+## Limitations
 
-### 🔍 How to enable debug logs
+- Only iQPump01 controllers (`device_type` `i2d`) are supported. Other
+  iAquaLink equipment isn't.
+- Cloud polling only; iAquaLink offers no local API.
+- Quick clean, timed run, and timed stop can be displayed but not started
+  remotely: writing those modes hasn't been confirmed to work.
 
-1. Edit your `configuration.yaml` (or go to **Settings > System > Logs > Configure**)
-2. Add the following to enable detailed logs:
+## Troubleshooting
+
+**Diagnostics:** on the integration's page, open the ⋮ menu → **Download
+diagnostics**. The file contains the pump's current state with emails, tokens,
+serial numbers, Wi-Fi SSID, and address fields redacted.
+
+**Debug logs:** add this to `configuration.yaml` and restart:
 
 ```yaml
 logger:
@@ -93,43 +156,47 @@ logger:
     custom_components.iaqualink_iqpump01: debug
 ```
 
-3. Restart Home Assistant
-
-### 📤 How to extract debug logs
-
-Run this command from your Home Assistant terminal or SSH:
+Then filter the log:
 
 ```bash
-cat /config/home-assistant.log | grep iaqualink_iqpump01
+grep iaqualink_iqpump01 /config/home-assistant.log
 ```
 
-This will filter the relevant debug messages from the integration.
+Logged API responses are redacted automatically, but review logs before
+posting them in an issue.
 
-> ⚠️ **Important**: Debug logs are automatically redacted by the integration, but always review them before pasting them in an issue. Remove any remaining email, password, authentication token, serial number, Wi-Fi SSID, address, or phone number.
+If you have a different Jandy pump model, diagnostics and debug logs from it
+are the most useful thing to include in an
+[issue](https://github.com/mickeyschwab/iaqualink_iqpump01/issues).
 
+## Development
 
-## 🚀 Planned Features
+```bash
+pip install -r requirements_test.txt
+pytest
+```
 
-- Support for multiple pumps (`i2d` devices)
-- Automatic discovery of other iAquaLink-compatible devices
-- Local API fallback (if available)
-- Pump scheduling and advanced automation templates
-- UI card suggestions for Lovelace Dashboard
+The tests run the integration inside a real Home Assistant instance against a
+simulated pump; nothing talks to the iAquaLink cloud. CI also runs `hassfest`
+and HACS validation. See [`CLAUDE.md`](CLAUDE.md) for an architecture overview
+and [`docs/FIELD_NOTES.md`](docs/FIELD_NOTES.md) for observed device behavior.
 
+## Credits
 
-## ⚖️ Disclaimer
+This integration was created by [@CLARENNE-Q](https://github.com/CLARENNE-Q)
+as [iaqualink_iqpump01](https://github.com/CLARENNE-Q/iaqualink_iqpump01).
+The iAquaLink login and control API client, the discovery of the pump's
+operating modes, the custom-speed write sequence, and the field notes this fork
+relies on all come from that project. If this integration is useful to you,
+consider supporting the original author:
 
-This project is not affiliated with or endorsed by Zodiac, Jandy, or iAquaLink.  
-It is a community-driven effort to bridge iQPump01 devices with Home Assistant using public and reverse-engineered API behavior.  
-Use at your own risk.
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/clarenneq)
 
+Thanks also to the Home Assistant community and everyone who has explored the
+Zodiac/iAquaLink APIs.
 
-## 🙏 Thanks
+## Disclaimer
 
-Big thanks to the Home Assistant community and to all the explorers diving into Zodiac APIs 🌊
-
-Special thanks to Zodiac / iAquaLink / Jandy for creating reliable, high-quality smart pool equipment.
-
-This project is not only a technical exploration, but also a way to promote and showcase the value of your connected pool systems. Many Home Assistant users are eager to integrate their iQPump01 into their smart home ecosystem.
-
-If you are part of the Zodiac team, feel free to reach out via a GitHub issue. I’d be happy to explore collaboration opportunities — including the possibility of a local API for better real-time control and offline access.
+This project is not affiliated with or endorsed by Zodiac, Jandy, or
+iAquaLink. It uses reverse-engineered API behavior and may stop working if
+iAquaLink changes its API. Use at your own risk.
