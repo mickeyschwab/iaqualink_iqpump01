@@ -1,10 +1,12 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/CLARENNE-Q/iaqualink_iqpump01)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01)
 ![version](https://img.shields.io/badge/version-2.0.0-blue)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/clarenneq)
 
 # iAquaLink iQPump01
 
 Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistant — no third-party libraries, using the native iAquaLink/Zodiac API.
+
+This is a fork of [CLARENNE-Q/iaqualink_iqpump01](https://github.com/CLARENNE-Q/iaqualink_iqpump01) with an RPM-native, mode-select redesign. See [CHANGELOG.md](CHANGELOG.md) for what changed in 2.0.0.
 
 ## ✅ Features
 
@@ -24,7 +26,7 @@ Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistan
 Requires Home Assistant 2024.11 or newer.
 
 1. In HACS > Integrations, click the 3-dot menu > Custom Repositories
-2. Add this repository: `https://github.com/CLARENNE-Q/iaqualink_iqpump01`
+2. Add this repository: `https://github.com/mickeyschwab/iaqualink_iqpump01`
 3. Choose category: Integration
 4. Install the integration and restart Home Assistant
 5. Go to **Settings > Devices & Services > Add Integration**, search for `iAquaLink iQPump01`
