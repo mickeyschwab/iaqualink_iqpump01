@@ -17,6 +17,7 @@ from .coordinator import IAqualinkConfigEntry, IAqualinkPumpCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = ["select", "number", "sensor", "binary_sensor"]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 SET_CUSTOM_SPEED_SCHEMA = vol.Schema(
     {

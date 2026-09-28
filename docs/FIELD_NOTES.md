@@ -256,9 +256,10 @@ service takes its own duration instead, so one call can set both.
 
 - Fields: `rpm` (raw RPM, matching what the iAquaLink app displays) and
   `duration` (HA duration selector, day component disabled).
-- Target is the iQPump01 **device** (`device_id`, multiple allowed;
-  `services.yaml` restricts the picker to `integration: iaqualink_iqpump01`
-  devices). `IAqualinkPumpCoordinator.async_get_by_device_id(hass, device_id)`
+- Target is the iQPump01 **device** (`device_id` field, multiple allowed; its
+  device selector is restricted to `integration: iaqualink_iqpump01`. It's a
+  field rather than a service `target` because HA rejects device filters on
+  targets; `target: device_id:` in YAML still works). `IAqualinkPumpCoordinator.async_get_by_device_id(hass, device_id)`
   resolves a device_id to its coordinator (the device's loaded config
   entries' `runtime_data`) — this is a general-purpose resolver
   on the coordinator class, not something private to this service, so any

@@ -5,10 +5,15 @@ set_custom_speed:
     matching the "set X rpm for X time" control in the iAquaLink app. The
     pump switches to custom/manual mode and reverts to the scheduled program
     once the duration elapses.
-  target:
-    device:
-      - integration: iaqualink_iqpump01
   fields:
+    device_id:
+      name: Pump
+      description: The iQPump01 device(s) to control.
+      required: true
+      selector:
+        device:
+          integration: iaqualink_iqpump01
+          multiple: true
     rpm:
       name: Speed
       description: >-
