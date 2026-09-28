@@ -17,7 +17,7 @@ from .api import (
 from .coordinator import IAqualinkPumpCoordinator
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = ["switch", "number", "sensor", "button", "binary_sensor"]
+PLATFORMS = ["select", "number", "sensor", "binary_sensor"]
 
 SET_CUSTOM_SPEED_SCHEMA = vol.Schema(
     {

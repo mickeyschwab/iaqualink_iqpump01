@@ -33,6 +33,3 @@ class IAqualinkPumpEntity(CoordinatorEntity):
     @property
     def client(self):
         return self.coordinator.client
-
-    def _raise_if_service_mode(self, action):
-        self.coordinator.raise_if_service_mode(action)

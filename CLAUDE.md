@@ -77,23 +77,23 @@ they're expected to stay in sync (currently `1.0.18`).
    per-device, not per-entity; see point 4.
 
 3. **`entity.py` — `IAqualinkPumpEntity`** (base `CoordinatorEntity`): shared
-   device_info, and a thin `_raise_if_service_mode()` wrapper that delegates to
-   the coordinator. Pump `opmode == "7"` means iAquaLink reports "remote
-   control not authorized" (physical service mode). Every write-capable
-   entity must call this guard before sending a command, raising
-   `HomeAssistantError` instead of silently failing.
+   device_info. Pump `opmode == 7` means iAquaLink reports "remote control
+   not authorized" (physical service mode); every coordinator write path calls
+   `raise_if_service_mode()` first, raising `HomeAssistantError` instead of
+   silently failing.
 
-4. **Platforms** (`switch.py`, `number.py`, `sensor.py`, `button.py`,
+4. **Platforms** (`select.py`, `number.py`, `sensor.py`,
    `binary_sensor.py`): each reads from `coordinator.data` (the raw
-   `alldata` dict); writes go through the coordinator rather than calling
-   the client directly (see `number.py`'s `async_set_value`, which just calls
-   `coordinator.async_set_custom_speed_rpm()`). Simple mode writes
-   (`switch.py`, `button.py`) call `client.set_opmode()` directly since they
-   don't share logic with anything else. There is exactly
-   one entity per platform today (single switch, single number, one button,
-   one binary sensor) — `sensor.py` is the one platform with multiple
-   entities, defined declaratively via the `FIELDS` dict (path into `alldata`,
-   unit, device_class, state_class).
+   `alldata` dict); all writes go through the coordinator
+   (`async_set_opmode`, `async_set_custom_speed_rpm`), never the client
+   directly. `select.py` is the single **Mode** control: `auto`/`custom`/`off`
+   are always offered (`WRITABLE_OPMODES` in `models.py`); read-only modes
+   (quick clean, timed run/stop, service) appear in `options` only while the
+   pump is in them, and the coordinator rejects writing them. Selecting
+   `custom` resumes the pump's saved `customspeedrpm` via the full
+   custom-speed sequence. `binary_sensor.py` has running (`runstate`) and
+   priming; `sensor.py` entities are declared via the `FIELDS` dict (path into
+   `alldata`, unit, device_class, state_class).
 
 5. **`config_flow.py`**: login step → if the account has more than one `i2d`
    device, a `select_pump` step lets the user pick a `serial_number`, which
@@ -124,8 +124,8 @@ they're expected to stay in sync (currently `1.0.18`).
 ### Key domain knowledge (see `docs/FIELD_NOTES.md` for full detail)
 
 - `opmode` values: `0` auto, `1` custom/manual, `2` off, `3` quick clean,
-  `4` timed run, `5` timed stop, `7` service mode (displayed as `off`, but
-  internally still blocks remote writes — see `OPMODE_SERVICE` in `const.py`).
+  `4` timed run, `5` timed stop, `7` service mode (blocks remote writes; the mode select shows `service`).
+  See `OpMode` in `models.py`.
 - Setting a custom RPM requires **three sequential writes**: `opmode=1`, then
   `customspeedrpm`, then `customspeedtimer` — writing RPM directly while in
   scheduled mode is ignored by the controller. This sequence lives in

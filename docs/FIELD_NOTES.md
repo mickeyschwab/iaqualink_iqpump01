@@ -87,8 +87,8 @@ Important behavior:
   with `value=0`.
 - Service mode (`opmode=7`) is not remotely controllable. Home Assistant should
   block write commands instead of trying to force pump control while the
-  iAquaLink app reports remote control is not authorized. The operating mode
-  sensor displays this as `off` to match the iQPump01 interface.
+  iAquaLink app reports remote control is not authorized. The mode select
+  shows this as `service` (the iQPump01 interface itself shows `off`).
 - If iAquaLink returns a different value than requested, Home Assistant should
   show a visible command error instead of silently accepting the state.
 
@@ -106,10 +106,16 @@ Observed `opmode` values:
 | `5` | Timed Stop |
 | `7` | Off/service mode; remote control not authorized |
 
-The Home Assistant operating mode sensor uses labels aligned with the iQPump01
-interface where observed: `auto`, `custom`, `off`, `quick clean`, `timed run`,
-and `timed stop`. Raw `opmode=7` is still treated internally as service mode for
-command blocking even though the displayed label is `off`.
+Home Assistant exposes this as a single **Mode** select with options `auto`,
+`custom`, `off`, `quick_clean`, `timed_run`, `timed_stop`, and `service`. Only
+`auto` (0), `custom` (1), and `off` (2) have confirmed remote writes, so those
+are always offered; the others appear only while the pump is in them and are
+rejected if selected. Selecting `custom` resumes the saved `customspeedrpm`
+using the full three-write custom-speed sequence.
+
+Whether the motor is actually spinning is `runstate` (`on`/`off`), exposed as
+a separate running binary sensor — `auto` mode can legitimately be not
+running if the schedule says so.
 
 Related fields:
 
@@ -224,12 +230,14 @@ Default values:
 
 Main entities added during recent improvements:
 
+- `select.pump_mode` (replaces the former on/off switch, return-to-program
+  button, and operating mode sensor)
 - `number.pump_rpm_target`
-- `button.pump_return_to_program`
+- `binary_sensor.pump_running` from `runstate`
 - `binary_sensor.pump_priming`
 - Pump speed sensor from `motordata.speed`
 - Pump power sensor from `motordata.power`
-- Operating mode sensor from `opmode`
+- Pump motor temperature sensor from `motordata.temperature`
 - Target RPM sensor from `rpmtarget`
 - Custom RPM sensor from `customspeedrpm`
 - Custom speed timer sensor from `customspeedtimer`
