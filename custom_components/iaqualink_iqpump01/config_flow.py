@@ -85,7 +85,8 @@ def _options_schema(options):
 
 
 class AqualinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    # Bump alongside async_migrate_entry in __init__.py.
+    VERSION = 2
 
     def __init__(self):
         self._pending_data = None
