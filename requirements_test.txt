@@ -1,0 +1,2 @@
+# Pins a matching Home Assistant release; bump together when upgrading.
+pytest-homeassistant-custom-component==0.13.316
