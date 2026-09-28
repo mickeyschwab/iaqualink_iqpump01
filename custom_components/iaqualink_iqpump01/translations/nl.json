@@ -46,5 +46,57 @@
         }
       }
     }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Auto (schedule)",
+          "custom": "Custom",
+          "off": "Off",
+          "quick_clean": "Quick clean",
+          "timed_run": "Timed run",
+          "timed_stop": "Timed stop",
+          "service": "Service (remote control locked)"
+        }
+      }
+    },
+    "number": {
+      "rpm_target": {
+        "name": "RPM target"
+      },
+      "custom_speed_duration": {
+        "name": "Custom speed duration"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Running"
+      },
+      "priming": {
+        "name": "Priming"
+      }
+    },
+    "sensor": {
+      "speed": {
+        "name": "Speed"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "motor_temperature": {
+        "name": "Motor temperature"
+      },
+      "rpm_target_reported": {
+        "name": "Target RPM"
+      },
+      "custom_speed_rpm": {
+        "name": "Custom speed RPM"
+      },
+      "custom_speed_timer": {
+        "name": "Custom speed time remaining"
+      }
+    }
   }
 }

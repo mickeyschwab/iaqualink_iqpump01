@@ -37,19 +37,25 @@ No further configuration is needed.
 
 ## 📈 Entities created
 
+Entity IDs are derived from the pump's device name, e.g.
+`select.iaqualink_iqpump01_pool_mode` for a pump named "Pool".
+
 | Entity | Description |
 |--------|-------------|
-| `select.pump_mode` | Operating mode: `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
-| `number.pump_rpm_target` | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
-| `number.pump_custom_speed_duration` | How long a custom speed runs before returning to the schedule (minutes, up to 23h59) |
-| `binary_sensor.pump_running` | Whether the motor is running |
-| `binary_sensor.pump_priming` | Whether the pump is priming |
-| `sensor.pump_power` | Power consumption (W) |
-| `sensor.pump_speed` | Current speed (RPM) |
-| `sensor.pump_motor_temperature` | Motor temperature |
-| `sensor.pump_target_rpm` | Requested target RPM |
-| `sensor.pump_custom_speed_rpm` | Custom speed RPM |
-| `sensor.pump_custom_speed_timer` | Remaining custom speed timer (seconds) |
+| Mode (select) | `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
+| RPM target (number) | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
+| Custom speed duration (number) | How long a custom speed runs before returning to the schedule (minutes, up to 23h59) |
+| Running (binary sensor) | Whether the motor is running |
+| Priming (binary sensor) | Whether the pump is priming |
+| Power (sensor) | Power consumption (W) |
+| Speed (sensor) | Current speed (RPM) |
+| Motor temperature (sensor) | Motor temperature |
+| Target RPM (sensor) | Requested target RPM |
+| Custom speed RPM (sensor) | Custom speed RPM |
+| Custom speed time remaining (sensor) | Remaining custom speed timer (seconds, `-1` when inactive) |
+
+Firmware version and serial number appear on the device page. Raw pump state
+(redacted) is available via **Download diagnostics** on the integration.
 
 ## 🧰 Services
 

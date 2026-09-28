@@ -2,7 +2,6 @@ import logging
 
 from homeassistant.components.select import SelectEntity
 
-from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
 from .models import WRITABLE_OPMODES, OpMode
 
@@ -20,7 +19,7 @@ MODE_OPTIONS = {
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     async_add_entities([PumpModeSelect(coordinator)])
 
 
@@ -28,7 +27,7 @@ class PumpModeSelect(IAqualinkPumpEntity, SelectEntity):
     def __init__(self, coordinator):
         super().__init__(coordinator)
         client = coordinator.client
-        self._attr_name = "Pump Mode"
+        self._attr_translation_key = "mode"
         self._attr_unique_id = f"{client.serial}_mode"
         self._attr_icon = "mdi:pump"
 

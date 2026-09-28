@@ -53,9 +53,10 @@ they're expected to stay in sync (currently `1.0.18`).
    - `_send_command(command, value)` — POSTs a write and cross-checks the
      echoed value, raising `IAqualinkCommandError` on mismatch (iAquaLink
      sometimes silently ignores writes — see Field Notes below).
-   - All responses are redacted before logging (`_redact_for_log`) — emails,
-     tokens, SSIDs, serials, etc. Preserve this when touching logging code;
-     never log raw payloads.
+   - All responses are redacted before logging (`IAqualinkClient.redact`) —
+     emails, tokens, SSIDs, serials, etc. `diagnostics.py` reuses the same
+     function. Preserve this when touching logging/diagnostics; never log raw
+     payloads.
    - Typed exceptions (`IAqualinkAuthError`, `IAqualinkConnectionError`,
      `IAqualinkNoDeviceError`, `IAqualinkCommandError`) are the contract the
      rest of the integration relies on to map failures to the right Home
@@ -77,7 +78,10 @@ they're expected to stay in sync (currently `1.0.18`).
    per-device, not per-entity; see point 4.
 
 3. **`entity.py` — `IAqualinkPumpEntity`** (base `CoordinatorEntity`): shared
-   device_info. Pump `opmode == 7` means iAquaLink reports "remote control
+   `DeviceInfo` (including firmware `sw_version` and serial) and
+   `_attr_has_entity_name = True`. Entities set a `translation_key`, never a
+   hard-coded name; names (and the mode select's state labels) live under
+   `entity` in `translations/*.json`. Pump `opmode == 7` means iAquaLink reports "remote control
    not authorized" (physical service mode); every coordinator write path calls
    `raise_if_service_mode()` first, raising `HomeAssistantError` instead of
    silently failing.
@@ -109,7 +113,9 @@ they're expected to stay in sync (currently `1.0.18`).
    without a reload. The legacy `custom_speed_timer_seconds` option only
    seeds its first value.
 
-6. **`__init__.py`**: sets up the client, coordinator, forwards to all
+6. **`__init__.py`**: sets up the client and coordinator, stores the
+   coordinator as `entry.runtime_data` (entries are typed
+   `IAqualinkConfigEntry`; there's no `hass.data[DOMAIN]`), forwards to all
    `PLATFORMS`, and on unload calls `coordinator.async_shutdown()` to cancel
    the fast-refresh timer. `async_setup()` also registers the
    `iaqualink_iqpump01.set_custom_speed` domain-level service (`services.yaml`,
@@ -117,8 +123,8 @@ they're expected to stay in sync (currently `1.0.18`).
    *and* a duration together in a single call, independent of the duration
    entity. The
    handler resolves each targeted `device_id` via
-   `IAqualinkPumpCoordinator.async_get_by_device_id()` (a reusable
-   classmethod, not one-off logic — the resolution belongs on the coordinator
+   `IAqualinkPumpCoordinator.async_get_by_device_id()` (walks the device's
+   loaded config entries to their `runtime_data`; a reusable staticmethod, not one-off logic — the resolution belongs on the coordinator
    since any future device-targeted service needs the same lookup), then runs
    `coordinator.async_set_custom_speed_rpm()` concurrently across all targeted
    pumps via `asyncio.gather`. It's a domain-level service

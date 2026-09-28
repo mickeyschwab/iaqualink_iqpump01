@@ -9,7 +9,6 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import REVOLUTIONS_PER_MINUTE, UnitOfPower, UnitOfTime
 
-from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
 from .models import PumpState
 
@@ -22,14 +21,14 @@ class PumpSensorEntityDescription(SensorEntityDescription):
 SENSORS = (
     PumpSensorEntityDescription(
         key="speed",
-        name="Pump Speed",
+        translation_key="speed",
         native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda state: state.motor_speed,
     ),
     PumpSensorEntityDescription(
         key="power",
-        name="Pump Power",
+        translation_key="power",
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
@@ -37,26 +36,26 @@ SENSORS = (
     ),
     PumpSensorEntityDescription(
         key="temperature",
-        name="Pump Motor Temperature",
+        translation_key="motor_temperature",
         # Unit isn't documented by iAquaLink, so no device_class/unit.
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda state: state.motor_temperature,
     ),
     PumpSensorEntityDescription(
         key="rpmtarget",
-        name="Pump Target RPM",
+        translation_key="rpm_target_reported",
         native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
         value_fn=lambda state: state.rpm_target,
     ),
     PumpSensorEntityDescription(
         key="customspeedrpm",
-        name="Pump Custom Speed RPM",
+        translation_key="custom_speed_rpm",
         native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
         value_fn=lambda state: state.custom_speed_rpm,
     ),
     PumpSensorEntityDescription(
         key="customspeedtimer",
-        name="Pump Custom Speed Timer",
+        translation_key="custom_speed_timer",
         native_unit_of_measurement=UnitOfTime.SECONDS,
         value_fn=lambda state: state.custom_speed_timer,
     ),
@@ -64,7 +63,7 @@ SENSORS = (
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    coordinator = config_entry.runtime_data
     async_add_entities(PumpSensor(coordinator, description) for description in SENSORS)
 
 
