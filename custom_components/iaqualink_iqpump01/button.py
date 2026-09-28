@@ -6,6 +6,7 @@ from homeassistant.exceptions import HomeAssistantError
 from .api import IAqualinkError
 from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
+from .models import OpMode
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +28,7 @@ class PumpReturnToProgramButton(IAqualinkPumpEntity, ButtonEntity):
         self._raise_if_service_mode("Return to program command")
         _LOGGER.debug("[PumpReturnToProgramButton] Returning pump to program mode.")
         try:
-            await self.hass.async_add_executor_job(
-                self.client._send_command,
-                "/opmode/write",
-                "value=0",
-            )
+            await self.client.set_opmode(OpMode.AUTO)
         except IAqualinkError as err:
             raise HomeAssistantError(
                 f"Unable to return pump to program mode: {err}"
