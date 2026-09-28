@@ -32,25 +32,18 @@ class PumpModeSelect(IAqualinkPumpEntity, SelectEntity):
         self._attr_unique_id = f"{client.serial}_mode"
         self._attr_icon = "mdi:pump"
 
-    def _current_opmode(self):
-        data = self.coordinator.data or {}
-        try:
-            return OpMode(int(data.get("opmode")))
-        except (TypeError, ValueError):
-            return None
-
     @property
     def options(self):
         options = [MODE_OPTIONS[mode] for mode in WRITABLE_OPMODES]
         # Read-only modes are listed only while the pump is in them.
-        current = self._current_opmode()
+        current = self.coordinator.data.opmode
         if current is not None and current not in WRITABLE_OPMODES:
             options.append(MODE_OPTIONS[current])
         return options
 
     @property
     def current_option(self):
-        current = self._current_opmode()
+        current = self.coordinator.data.opmode
         return MODE_OPTIONS.get(current) if current is not None else None
 
     async def async_select_option(self, option):

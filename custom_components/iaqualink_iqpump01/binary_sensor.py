@@ -28,10 +28,7 @@ class PumpRunningBinarySensor(IAqualinkPumpEntity, BinarySensorEntity):
 
     @property
     def is_on(self):
-        runstate = (self.coordinator.data or {}).get("runstate")
-        if runstate is None:
-            return None
-        return runstate == "on"
+        return self.coordinator.data.running
 
 
 class PumpPrimingBinarySensor(IAqualinkPumpEntity, BinarySensorEntity):
@@ -44,30 +41,13 @@ class PumpPrimingBinarySensor(IAqualinkPumpEntity, BinarySensorEntity):
 
     @property
     def is_on(self):
-        data = self.coordinator.data or {}
-        timer = self._coerce_int(data.get("primingtimer"))
-        if timer is None:
-            return None
-        return timer >= 0
+        return self.coordinator.data.is_priming
 
     @property
     def extra_state_attributes(self):
-        data = self.coordinator.data or {}
+        state = self.coordinator.data
         return {
-            "priming_timer": self._coerce_int(data.get("primingtimer")),
-            "priming_period": self._coerce_int(data.get("primingperiod")),
-            "priming_rpm": self._coerce_int(data.get("primingrpm")),
-            "motor_speed": self._coerce_int(data.get("motordata", {}).get("speed")),
-            "target_rpm": self._coerce_int(data.get("rpmtarget")),
-            "runstate": data.get("runstate"),
-            "opmode": data.get("opmode"),
+            "priming_timer": state.priming_timer,
+            "priming_period": state.priming_period,
+            "priming_rpm": state.priming_rpm,
         }
-
-    @staticmethod
-    def _coerce_int(value):
-        if value in (None, ""):
-            return None
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return None

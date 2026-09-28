@@ -1,5 +1,4 @@
 DOMAIN = "iaqualink_iqpump01"
-OPMODE_SERVICE = "7"
 SERVICE_MODE_REMOTE_CONTROL_ERROR = (
     "Remote control not authorized: pump is in service mode."
 )
@@ -26,9 +25,6 @@ MAX_CUSTOM_SPEED_TIMER_SECONDS = max(CUSTOM_SPEED_TIMER_OPTIONS)
 
 SERVICE_SET_CUSTOM_SPEED = "set_custom_speed"
 
-DEFAULT_RPM_MIN = 1000
-DEFAULT_RPM_MAX = 3450
-
 
 def option_int(options, key, default):
     """Return an integer option while tolerating legacy/string values."""
@@ -37,11 +33,3 @@ def option_int(options, key, default):
     except (TypeError, ValueError):
         return default
 
-
-def rpm_limits(data):
-    """Return (rpm_min, rpm_max) from device data, with fallback defaults."""
-    data = data or {}
-    return (
-        int(data.get("globalrpmmin", DEFAULT_RPM_MIN)),
-        int(data.get("globalrpmmax", DEFAULT_RPM_MAX)),
-    )

@@ -1,83 +1,81 @@
-import logging
-from homeassistant.components.sensor import SensorEntity
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.const import REVOLUTIONS_PER_MINUTE, UnitOfPower, UnitOfTime
+
 from .const import DOMAIN
 from .entity import IAqualinkPumpEntity
+from .models import PumpState
 
-_LOGGER = logging.getLogger(__name__)
 
-FIELDS = {
-    "speed": {
-        "name": "Pump Speed",
-        "path": ("motordata", "speed"),
-        "unit": "rpm",
-        "state_class": "measurement",
-    },
-    "power": {
-        "name": "Pump Power",
-        "path": ("motordata", "power"),
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-    },
-    "temperature": {
-        "name": "Pump Motor Temperature",
-        "path": ("motordata", "temperature"),
-        "state_class": "measurement",
-    },
-    "rpmtarget": {
-        "name": "Pump Target RPM",
-        "path": ("rpmtarget",),
-        "unit": "rpm",
-    },
-    "customspeedrpm": {
-        "name": "Pump Custom Speed RPM",
-        "path": ("customspeedrpm",),
-        "unit": "rpm",
-    },
-    "customspeedtimer": {
-        "name": "Pump Custom Speed Timer",
-        "path": ("customspeedtimer",),
-        "unit": "s",
-    },
-}
+@dataclass(frozen=True, kw_only=True)
+class PumpSensorEntityDescription(SensorEntityDescription):
+    value_fn: Callable[[PumpState], int | float | None]
+
+
+SENSORS = (
+    PumpSensorEntityDescription(
+        key="speed",
+        name="Pump Speed",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_speed,
+    ),
+    PumpSensorEntityDescription(
+        key="power",
+        name="Pump Power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_power,
+    ),
+    PumpSensorEntityDescription(
+        key="temperature",
+        name="Pump Motor Temperature",
+        # Unit isn't documented by iAquaLink, so no device_class/unit.
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_temperature,
+    ),
+    PumpSensorEntityDescription(
+        key="rpmtarget",
+        name="Pump Target RPM",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        value_fn=lambda state: state.rpm_target,
+    ),
+    PumpSensorEntityDescription(
+        key="customspeedrpm",
+        name="Pump Custom Speed RPM",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        value_fn=lambda state: state.custom_speed_rpm,
+    ),
+    PumpSensorEntityDescription(
+        key="customspeedtimer",
+        name="Pump Custom Speed Timer",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        value_fn=lambda state: state.custom_speed_timer,
+    ),
+)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    sensors = [PumpSensor(coordinator, key, description) for key, description in FIELDS.items()]
-    async_add_entities(sensors)
+    async_add_entities(PumpSensor(coordinator, description) for description in SENSORS)
+
 
 class PumpSensor(IAqualinkPumpEntity, SensorEntity):
-    def __init__(self, coordinator, field, description):
-        super().__init__(coordinator)
-        self._field = field
-        self._description = description
-        self._attr_name = description["name"]
-        self._attr_unique_id = f"{coordinator.client.serial}_{field}"
+    entity_description: PumpSensorEntityDescription
 
-        self._attr_native_unit_of_measurement = description.get("unit")
-        self._attr_device_class = description.get("device_class")
-        self._attr_state_class = description.get("state_class")
+    def __init__(self, coordinator, description):
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{coordinator.client.serial}_{description.key}"
 
     @property
     def native_value(self):
-        data = self.coordinator.data or {}
-        value = self._value_from_path(data, self._description["path"])
-        return self._coerce_number(value)
-
-    @staticmethod
-    def _value_from_path(data, path):
-        value = data
-        for key in path:
-            if not isinstance(value, dict):
-                return None
-            value = value.get(key)
-        return value
-
-    @staticmethod
-    def _coerce_number(value):
-        if value in (None, ""):
-            return None
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return value
+        return self.entity_description.value_fn(self.coordinator.data)

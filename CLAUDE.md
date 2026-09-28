@@ -61,7 +61,7 @@ they're expected to stay in sync (currently `1.0.18`).
      rest of the integration relies on to map failures to the right Home
      Assistant behavior.
 
-2. **`coordinator.py` — `IAqualinkPumpCoordinator`** (`DataUpdateCoordinator`):
+2. **`coordinator.py` — `IAqualinkPumpCoordinator`** (`DataUpdateCoordinator[PumpState]`):
    owns polling cadence and translates client exceptions to HA's expected
    types (`ConfigEntryAuthFailed`, `UpdateFailed`). Supports a **fast-refresh
    mode**: after a speed-changing command, `enable_fast_refresh()` temporarily
@@ -83,8 +83,8 @@ they're expected to stay in sync (currently `1.0.18`).
    silently failing.
 
 4. **Platforms** (`select.py`, `number.py`, `sensor.py`,
-   `binary_sensor.py`): each reads from `coordinator.data` (the raw
-   `alldata` dict); all writes go through the coordinator
+   `binary_sensor.py`): each reads typed fields from `coordinator.data` (a
+   `PumpState`, see `models.py`); all writes go through the coordinator
    (`async_set_opmode`, `async_set_custom_speed_rpm`), never the client
    directly. `select.py` is the single **Mode** control: `auto`/`custom`/`off`
    are always offered (`WRITABLE_OPMODES` in `models.py`); read-only modes
@@ -92,8 +92,8 @@ they're expected to stay in sync (currently `1.0.18`).
    pump is in them, and the coordinator rejects writing them. Selecting
    `custom` resumes the pump's saved `customspeedrpm` via the full
    custom-speed sequence. `binary_sensor.py` has running (`runstate`) and
-   priming; `sensor.py` entities are declared via the `FIELDS` dict (path into
-   `alldata`, unit, device_class, state_class).
+   priming; `sensor.py` entities are declared as `PumpSensorEntityDescription`s
+   with a `value_fn` over `PumpState`.
 
 5. **`config_flow.py`**: login step → if the account has more than one `i2d`
    device, a `select_pump` step lets the user pick a `serial_number`, which
@@ -134,7 +134,11 @@ they're expected to stay in sync (currently `1.0.18`).
 - Speed is RPM everywhere — the integration deliberately never uses a
   percentage (an earlier 0–100% number drifted on round-trips). The number
   entity's min/max come from `globalrpmmin`/`globalrpmmax` in device state
-  (fallback `1000`/`3450`, see `const.rpm_limits()`), step 25 RPM.
+  (`PumpState.rpm_min`/`rpm_max`, fallback `1000`/`3450`), step 25 RPM.
+- iAquaLink reports every `alldata` field as a string. `PumpState.from_alldata()`
+  in `models.py` is the single place that parses them (ints, `OpMode`,
+  `running`, `is_priming`); entities should never read the raw dict.
+  `PumpState.raw` keeps the original payload for diagnostics.
 - Priming is inferred as `primingtimer >= 0` (a timer value of `-1` means
   inactive) — the same "`-1` = inactive" convention applies to
   `customspeedtimer`.
