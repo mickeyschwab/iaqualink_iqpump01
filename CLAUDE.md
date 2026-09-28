@@ -10,24 +10,28 @@ iQPump01 variable-speed pool pumps through the native iAquaLink/Zodiac cloud API
 domain is `iaqualink_iqpump01`; all code lives under
 `custom_components/iaqualink_iqpump01/`.
 
-There is currently no test suite, no lint config, and no CI workflow in this repo
-— `docs/AUDIT_RECOMMENDATIONS.md` calls this out explicitly as a gap. Don't assume
-tooling that isn't present; verify changes by reading the code path and, where
-possible, checking Python syntax (see Commands below).
+Tests live in `tests/` (`pytest-homeassistant-custom-component`, which runs
+the integration inside a real Home Assistant instance). CI
+(`.github/workflows/ci.yml`) runs them plus `hassfest` and HACS validation on
+every push and PR. There's no lint config yet.
 
 ## Commands
 
-There is no build step (Home Assistant loads the component directly) and no
-configured test/lint tooling. Useful ad hoc checks:
+There is no build step (Home Assistant loads the component directly).
 
 ```bash
-# Syntax-check all component files
-python3 -m py_compile custom_components/iaqualink_iqpump01/*.py
-
-# Validate JSON (manifest, hacs.json, translations)
-python3 -m json.tool hacs.json > /dev/null
-python3 -m json.tool custom_components/iaqualink_iqpump01/manifest.json > /dev/null
+# Run the test suite (Python 3.13; the pinned plugin pulls a matching HA)
+pip install -r requirements_test.txt
+pytest
 ```
+
+The tests never touch the real cloud: `tests/conftest.py`'s `FakePump`
+answers the iAquaLink control endpoint through `aioclient_mock`, records
+writes in `pump.writes`, and can simulate ignored writes (`pump.ignore`) or
+HTTP errors (`pump.control_status`). Add a test there for any new command or
+entity. `requirements_test.txt` pins the plugin (and therefore the HA
+version); bump it deliberately. `manifest.json` keys must stay sorted
+(`domain`, `name`, then alphabetical) or `hassfest` fails.
 
 When releasing, bump `version` in
 `custom_components/iaqualink_iqpump01/manifest.json` (currently `2.0.0`) and
