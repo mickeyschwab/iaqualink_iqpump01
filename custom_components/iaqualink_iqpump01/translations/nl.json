@@ -15,6 +15,13 @@
         "data": {
           "serial": "Pump"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate iAquaLink",
+        "description": "iAquaLink rejected the saved credentials for {email}. Enter the current password.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -23,20 +30,72 @@
       "no_device": "No iQPump01 controller was found in this iAquaLink account."
     },
     "abort": {
-      "already_configured": "This device is already configured."
+      "already_configured": "This device is already configured.",
+      "reauth_successful": "Reauthentication was successful."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "iAquaLink iQPump01 Options",
-        "description": "Tune manual speed duration and polling behavior.",
+        "description": "Tune polling behavior.",
         "data": {
-          "custom_speed_timer_seconds": "Manual speed duration",
           "update_interval_seconds": "Normal polling interval",
           "fast_update_interval_seconds": "Fast polling interval after RPM change",
           "fast_refresh_duration_seconds": "Fast polling duration after RPM change"
         }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Auto (schedule)",
+          "custom": "Custom",
+          "off": "Off",
+          "quick_clean": "Quick clean",
+          "timed_run": "Timed run",
+          "timed_stop": "Timed stop",
+          "service": "Service (remote control locked)"
+        }
+      }
+    },
+    "number": {
+      "rpm_target": {
+        "name": "RPM target"
+      },
+      "custom_speed_duration": {
+        "name": "Custom speed duration"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "Running"
+      },
+      "priming": {
+        "name": "Priming"
+      }
+    },
+    "sensor": {
+      "speed": {
+        "name": "Speed"
+      },
+      "power": {
+        "name": "Power"
+      },
+      "motor_temperature": {
+        "name": "Motor temperature"
+      },
+      "rpm_target_reported": {
+        "name": "Target RPM"
+      },
+      "custom_speed_rpm": {
+        "name": "Custom speed RPM"
+      },
+      "custom_speed_timer": {
+        "name": "Custom speed time remaining"
       }
     }
   }

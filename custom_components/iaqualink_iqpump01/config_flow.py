@@ -2,15 +2,13 @@ import logging
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import AbortFlow
 from homeassistant.helpers import selector
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 from .const import (
     CONF_SERIAL,
-    CONF_CUSTOM_SPEED_TIMER_SECONDS,
     CONF_FAST_REFRESH_DURATION_SECONDS,
     CONF_FAST_UPDATE_INTERVAL_SECONDS,
     CONF_UPDATE_INTERVAL_SECONDS,
-    CUSTOM_SPEED_TIMER_OPTIONS,
-    DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
     DEFAULT_FAST_REFRESH_DURATION_SECONDS,
     DEFAULT_FAST_UPDATE_INTERVAL_SECONDS,
     DEFAULT_UPDATE_INTERVAL_SECONDS,
@@ -27,7 +25,6 @@ from .api import (
 _LOGGER = logging.getLogger(__name__)
 
 OPTION_INT_KEYS = (
-    CONF_CUSTOM_SPEED_TIMER_SECONDS,
     CONF_UPDATE_INTERVAL_SECONDS,
     CONF_FAST_UPDATE_INTERVAL_SECONDS,
     CONF_FAST_REFRESH_DURATION_SECONDS,
@@ -36,22 +33,6 @@ OPTION_INT_KEYS = (
 
 def _options_schema(options):
     return vol.Schema({
-        vol.Required(
-            CONF_CUSTOM_SPEED_TIMER_SECONDS,
-            default=str(option_int(
-                options,
-                CONF_CUSTOM_SPEED_TIMER_SECONDS,
-                DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
-            )),
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[
-                    selector.SelectOptionDict(value=str(value), label=label)
-                    for value, label in CUSTOM_SPEED_TIMER_OPTIONS.items()
-                ],
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
-        ),
         vol.Required(
             CONF_UPDATE_INTERVAL_SECONDS,
             default=option_int(
@@ -104,7 +85,8 @@ def _options_schema(options):
 
 
 class AqualinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    VERSION = 1
+    # Bump alongside async_migrate_entry in __init__.py.
+    VERSION = 2
 
     def __init__(self):
         self._pending_data = None
@@ -174,9 +156,11 @@ class AqualinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = dict(user_input)
             data["email"] = data["email"].strip().lower()
-            client = IAqualinkClient(data["email"], data["password"])
+            client = IAqualinkClient(
+                async_get_clientsession(self.hass), data["email"], data["password"]
+            )
             try:
-                await self.hass.async_add_executor_job(client.login)
+                await client.login()
                 self._devices = client.devices
                 if len(self._devices) == 1:
                     return await self._async_create_pump_entry(
@@ -223,6 +207,39 @@ class AqualinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="select_pump",
             data_schema=self._select_pump_schema(),
+        )
+
+    async def async_step_reauth(self, entry_data):
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        entry = self._get_reauth_entry()
+        errors = {}
+        if user_input is not None:
+            client = IAqualinkClient(
+                async_get_clientsession(self.hass),
+                entry.data["email"],
+                user_input["password"],
+                entry.data.get(CONF_SERIAL),
+            )
+            try:
+                await client.login()
+            except IAqualinkAuthError:
+                errors["base"] = "invalid_auth"
+            except IAqualinkNoDeviceError:
+                errors["base"] = "no_device"
+            except IAqualinkConnectionError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={"password": user_input["password"]}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required("password"): str}),
+            description_placeholders={"email": entry.data["email"]},
+            errors=errors,
         )
 
 

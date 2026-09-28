@@ -87,8 +87,8 @@ Important behavior:
   with `value=0`.
 - Service mode (`opmode=7`) is not remotely controllable. Home Assistant should
   block write commands instead of trying to force pump control while the
-  iAquaLink app reports remote control is not authorized. The operating mode
-  sensor displays this as `off` to match the iQPump01 interface.
+  iAquaLink app reports remote control is not authorized. The mode select
+  shows this as `service` (the iQPump01 interface itself shows `off`).
 - If iAquaLink returns a different value than requested, Home Assistant should
   show a visible command error instead of silently accepting the state.
 
@@ -106,10 +106,16 @@ Observed `opmode` values:
 | `5` | Timed Stop |
 | `7` | Off/service mode; remote control not authorized |
 
-The Home Assistant operating mode sensor uses labels aligned with the iQPump01
-interface where observed: `auto`, `custom`, `off`, `quick clean`, `timed run`,
-and `timed stop`. Raw `opmode=7` is still treated internally as service mode for
-command blocking even though the displayed label is `off`.
+Home Assistant exposes this as a single **Mode** select with options `auto`,
+`custom`, `off`, `quick_clean`, `timed_run`, `timed_stop`, and `service`. Only
+`auto` (0), `custom` (1), and `off` (2) have confirmed remote writes, so those
+are always offered; the others appear only while the pump is in them and are
+rejected if selected. Selecting `custom` resumes the saved `customspeedrpm`
+using the full three-write custom-speed sequence.
+
+Whether the motor is actually spinning is `runstate` (`on`/`off`), exposed as
+a separate running binary sensor — `auto` mode can legitimately be not
+running if the schedule says so.
 
 Related fields:
 
@@ -119,23 +125,20 @@ Related fields:
 - `customspeedtimer`: remaining custom/manual timer seconds, or `-1` when inactive.
 - `motordata.speed`: actual motor speed, which can lag behind target changes.
 
-## RPM And Percentage Control
+## RPM Control
 
-Home Assistant number entities are exposed as percentage values from `0` to `100`.
-The integration maps this range to the controller RPM range:
+The Home Assistant number entity is expressed directly in RPM, matching what the
+iAquaLink app displays — there is no percentage mapping:
 
 - Minimum from `globalrpmmin`, fallback `1000`.
 - Maximum from `globalrpmmax`, fallback `3450`.
-- Requested RPM is rounded to the nearest 25 RPM.
+- Step is 25 RPM; requested RPM is also rounded to the nearest 25 RPM before
+  writing, since the controller only accepts targets in 25 RPM increments.
+- The displayed value is the controller-reported `rpmtarget`.
 
-Example with `globalrpmmin=1000` and `globalrpmmax=3450`:
-
-| Percent | RPM |
-| --- | --- |
-| `0` | `1000` |
-| `20` | about `1500` |
-| `50` | about `2225` |
-| `100` | `3450` |
+Earlier versions exposed a `0–100%` number. That mapping truncated in both
+directions, so reading a value and setting it back could drift the RPM (e.g.
+`1975` RPM displayed as `39%`, which wrote back as `1950`). It was removed.
 
 ## Timers
 
@@ -149,15 +152,9 @@ Custom speed timer:
 - `customspeedtimer=-1`: no active custom speed timer.
 - `customspeedtimer>=0`: active custom speed timer.
 
-Supported configurable manual speed durations in the integration:
-
-- `30 min`
-- `1 h`
-- `6 h`
-- `12 h`
-- `23 h 59`
-
-The iAquaLink mobile app appears to allow up to approximately `23 h 59`.
+The integration's custom speed duration is a Home Assistant number entity in
+minutes (`1`–`1439`, default 6 h), restored across restarts. The iAquaLink
+mobile app appears to allow up to approximately `23 h 59`, so that's the cap.
 
 ## Priming
 
@@ -197,9 +194,8 @@ This means the pump is likely in priming because `primingtimer=40`.
 
 The integration exposes this as a binary sensor:
 
-```text
-binary_sensor.pump_priming
-```
+a priming binary sensor with `priming_timer`, `priming_period`, and
+`priming_rpm` attributes.
 
 ## Polling And Refresh Behavior
 
@@ -225,14 +221,19 @@ Default values:
 
 ## Home Assistant Entities
 
-Main entities added during recent improvements:
+Entities use Home Assistant's `has_entity_name` naming, so entity IDs are
+derived from the device name (e.g. `select.iaqualink_iqpump01_pool_mode` for a
+pump named "Pool"). Entities:
 
-- `number.pump_rpm_target_percentage`
-- `button.pump_return_to_program`
-- `binary_sensor.pump_priming`
+- Mode select (replaces the former on/off switch, return-to-program button,
+  and operating mode sensor)
+- RPM target number
+- Custom speed duration number (config)
+- Running binary sensor from `runstate`
+- Priming binary sensor
 - Pump speed sensor from `motordata.speed`
 - Pump power sensor from `motordata.power`
-- Operating mode sensor from `opmode`
+- Pump motor temperature sensor from `motordata.temperature`
 - Target RPM sensor from `rpmtarget`
 - Custom RPM sensor from `customspeedrpm`
 - Custom speed timer sensor from `customspeedtimer`
@@ -240,23 +241,27 @@ Main entities added during recent improvements:
 The exact entity IDs can vary depending on Home Assistant's entity registry and
 user customizations.
 
+Raw pump state (redacted) is available from the integration's **Download
+diagnostics** instead of entity attributes, so SSIDs, serials, and similar
+values never land in the recorder database.
+
 ## Services
 
 `iaqualink_iqpump01.set_custom_speed` is a domain-level service (registered in
 `__init__.py`'s `async_setup`, not tied to any single entity platform) that
 sets a custom RPM target for a specific duration in one call, matching the
-"set X rpm for X time" control in the iAquaLink app. The `number` entity's
-`async_set_value` only ever writes a percentage-mapped RPM using the
-options-flow preset duration; this service is the only way to set an
-arbitrary RPM and an arbitrary duration together.
+"set X rpm for X time" control in the iAquaLink app. The RPM number
+entity and selecting `custom` mode use the custom speed duration entity; this
+service takes its own duration instead, so one call can set both.
 
 - Fields: `rpm` (raw RPM, matching what the iAquaLink app displays) and
   `duration` (HA duration selector, day component disabled).
-- Target is the iQPump01 **device** (`device_id`, multiple allowed;
-  `services.yaml` restricts the picker to `integration: iaqualink_iqpump01`
-  devices). `IAqualinkPumpCoordinator.async_get_by_device_id(hass, device_id)`
-  resolves a device_id to its coordinator (device registry `config_entries`
-  intersected with `hass.data[DOMAIN]`) — this is a general-purpose resolver
+- Target is the iQPump01 **device** (`device_id` field, multiple allowed; its
+  device selector is restricted to `integration: iaqualink_iqpump01`. It's a
+  field rather than a service `target` because HA rejects device filters on
+  targets; `target: device_id:` in YAML still works). `IAqualinkPumpCoordinator.async_get_by_device_id(hass, device_id)`
+  resolves a device_id to its coordinator (the device's loaded config
+  entries' `runtime_data`) — this is a general-purpose resolver
   on the coordinator class, not something private to this service, so any
   future device-targeted service can reuse it. The handler in `__init__.py`
   resolves every targeted device first (raising if any is unrecognized), then
@@ -271,10 +276,10 @@ arbitrary RPM and an arbitrary duration together.
   same ceiling the app enforces) before any write happens.
 - The actual write sequence (and the service-mode guard) live in
   `IAqualinkPumpCoordinator._async_write_custom_speed(rpm, duration_seconds)`,
-  which rounds to the nearest 25 RPM the controller accepts. Both
-  `async_set_custom_speed(percentage, ...)` (used by the number entity) and
-  `async_set_custom_speed_rpm(rpm, ...)` (used by the service) funnel into
-  it — extend that helper, don't duplicate the three-write sequence.
+  which rounds to the nearest 25 RPM the controller accepts. Both the
+  number entity and the service call `async_set_custom_speed_rpm(rpm, ...)`,
+  which validates the range and funnels into it — extend that helper, don't
+  duplicate the three-write sequence.
 
 ## Config Flow And Options Flow
 
@@ -289,7 +294,6 @@ Config flow behavior:
 
 Options flow exposes:
 
-- Manual/custom speed timer duration.
 - Normal polling interval.
 - Fast polling interval after RPM change.
 - Fast polling duration after RPM change.
@@ -300,8 +304,8 @@ Changing options reloads the integration so the coordinator uses the new values.
 
 Implementation decisions:
 
-- All `requests` calls should use a timeout.
-- HTTP errors should call `raise_for_status()`.
+- All HTTP calls use a 15s `aiohttp.ClientTimeout`.
+- HTTP error statuses are checked (`_raise_for_status`) before parsing.
 - `401` and `403` should map to authentication errors.
 - Connection/timeouts should map to retryable setup/update errors.
 - Login failures should become `ConfigEntryAuthFailed`.

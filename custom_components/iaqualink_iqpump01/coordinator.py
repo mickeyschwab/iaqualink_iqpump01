@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers import device_registry as dr
@@ -11,7 +11,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     IAqualinkAuthError,
     IAqualinkClient,
-    IAqualinkCommandError,
     IAqualinkConnectionError,
     IAqualinkError,
 )
@@ -26,24 +25,25 @@ from .const import (
     DEFAULT_UPDATE_INTERVAL_SECONDS,
     DOMAIN,
     MAX_CUSTOM_SPEED_TIMER_SECONDS,
-    OPMODE_SERVICE,
     SERVICE_MODE_REMOTE_CONTROL_ERROR,
     option_int,
-    rpm_limits,
 )
+from .models import WRITABLE_OPMODES, OpMode, PumpState
 
 _LOGGER = logging.getLogger(__name__)
 
-class IAqualinkPumpCoordinator(DataUpdateCoordinator):
+type IAqualinkConfigEntry = ConfigEntry["IAqualinkPumpCoordinator"]
+
+
+class IAqualinkPumpCoordinator(DataUpdateCoordinator[PumpState]):
     """Coordinate iAquaLink pump polling for all entities."""
 
     def __init__(
         self,
         hass: HomeAssistant,
         client: IAqualinkClient,
-        config_entry: ConfigEntry,
+        config_entry: IAqualinkConfigEntry,
     ) -> None:
-        self.config_entry = config_entry
         self.default_update_interval = timedelta(
             seconds=option_int(
                 config_entry.options,
@@ -68,23 +68,28 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
         super().__init__(
             hass,
             logger=_LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=self.default_update_interval,
         )
         self.client = client
         self._fast_refresh_unsub = None
+        # Owned by the custom speed duration number entity, which restores it.
+        self.custom_speed_duration_seconds = option_int(
+            config_entry.options,
+            CONF_CUSTOM_SPEED_TIMER_SECONDS,
+            DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
+        )
 
     async def _async_update_data(self):
         try:
-            return await self.hass.async_add_executor_job(self.client.refresh_data)
+            return PumpState.from_alldata(await self.client.refresh_data())
         except IAqualinkAuthError as err:
             raise ConfigEntryAuthFailed("iAquaLink authentication failed") from err
         except IAqualinkConnectionError as err:
             raise UpdateFailed(f"Network/HTTP error communicating with iAquaLink: {err}") from err
-        except IAqualinkCommandError as err:
-            raise UpdateFailed(f"Command validation failed: {err}") from err
-        except Exception as err:
-            raise UpdateFailed(f"Unexpected error communicating with iAquaLink: {err}") from err
+        except IAqualinkError as err:
+            raise UpdateFailed(f"Unexpected iAquaLink error: {err}") from err
 
     @callback
     def enable_fast_refresh(self) -> None:
@@ -123,37 +128,51 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
         device = dr.async_get(hass).async_get(device_id)
         if device is None:
             return None
-        domain_entries = hass.data.get(DOMAIN, {})
-        entry_id = next(iter(device.config_entries & domain_entries.keys()), None)
-        return domain_entries.get(entry_id)
-
-    def custom_speed_timer_seconds(self) -> int:
-        return option_int(
-            self.config_entry.options,
-            CONF_CUSTOM_SPEED_TIMER_SECONDS,
-            DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
-        )
+        for entry_id in device.config_entries:
+            entry = hass.config_entries.async_get_entry(entry_id)
+            if (
+                entry is not None
+                and entry.domain == DOMAIN
+                and entry.state is ConfigEntryState.LOADED
+            ):
+                return entry.runtime_data
+        return None
 
     def raise_if_service_mode(self, action) -> None:
-        data = self.data or {}
-        if str(data.get("opmode")) != OPMODE_SERVICE:
+        if self.data is None or self.data.opmode is not OpMode.SERVICE:
             return
-        _LOGGER.warning(
-            "%s ignored: pump in service mode (opmode=%s)",
-            action,
-            OPMODE_SERVICE,
-        )
+        _LOGGER.warning("%s ignored: pump in service mode", action)
         raise HomeAssistantError(SERVICE_MODE_REMOTE_CONTROL_ERROR)
 
-    async def async_set_custom_speed(self, percentage, duration_seconds) -> None:
-        """Set a custom speed via percentage (used by the number entity)."""
-        rpm_min, rpm_max = rpm_limits(self.data)
-        rpm = int(rpm_min + (percentage / 100) * (rpm_max - rpm_min))
-        await self._async_write_custom_speed(rpm, duration_seconds)
+    async def async_set_opmode(self, opmode: OpMode) -> None:
+        """Switch operating mode (used by the mode select)."""
+        if opmode not in WRITABLE_OPMODES:
+            raise HomeAssistantError(
+                f"Mode {opmode.name.lower()} can't be set remotely."
+            )
+        if opmode is OpMode.CUSTOM:
+            # opmode=1 alone may be ignored; resume the pump's saved custom
+            # speed through the full custom-speed sequence instead.
+            rpm = self.data.custom_speed_rpm or self.data.rpm_target
+            if rpm is None:
+                raise HomeAssistantError("Pump has no saved custom speed to resume.")
+            await self.async_set_custom_speed_rpm(
+                rpm, self.custom_speed_duration_seconds
+            )
+            return
+
+        self.raise_if_service_mode("Set mode command")
+        try:
+            await self.client.set_opmode(opmode)
+        except IAqualinkError as err:
+            raise HomeAssistantError(f"Unable to set pump mode: {err}") from err
+
+        self.enable_fast_refresh()
+        await self.async_request_refresh()
 
     async def async_set_custom_speed_rpm(self, rpm, duration_seconds) -> None:
-        """Set a custom speed via raw RPM (used by the set_custom_speed service)."""
-        rpm_min, rpm_max = rpm_limits(self.data)
+        """Set a custom speed via raw RPM (used by the number entity and service)."""
+        rpm_min, rpm_max = self.data.rpm_min, self.data.rpm_max
         if not rpm_min <= rpm <= rpm_max:
             raise HomeAssistantError(
                 f"RPM must be between {rpm_min} and {rpm_max} for this pump."
@@ -169,9 +188,6 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
                 f"{MAX_CUSTOM_SPEED_TIMER_SECONDS} seconds (23h59)."
             )
 
-        # The pump only accepts RPM targets in increments of 25.
-        rpm = int(round(rpm / 25) * 25)
-
         _LOGGER.debug(
             "[_async_write_custom_speed] %s RPM for %ss",
             rpm,
@@ -179,19 +195,7 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
         )
 
         try:
-            # The controller ignores custom RPM writes while running in scheduled mode
-            # (opmode=0). Switch to manual/custom speed mode before writing the target.
-            await self.hass.async_add_executor_job(
-                self.client._send_command, "/opmode/write", "value=1"
-            )
-            await self.hass.async_add_executor_job(
-                self.client._send_command, "/customspeedrpm/write", f"value={rpm}"
-            )
-            await self.hass.async_add_executor_job(
-                self.client._send_command,
-                "/customspeedtimer/write",
-                f"value={duration_seconds}",
-            )
+            await self.client.set_custom_speed(rpm, duration_seconds)
         except IAqualinkError as err:
             raise HomeAssistantError(f"Unable to set pump speed: {err}") from err
 

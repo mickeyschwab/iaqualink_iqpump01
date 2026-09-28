@@ -1,30 +1,32 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/CLARENNE-Q/iaqualink_iqpump01)
-![version](https://img.shields.io/badge/version-1.0.15-blue)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01)
+![version](https://img.shields.io/badge/version-2.0.0-blue)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-%23FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/clarenneq)
 
 # iAquaLink iQPump01
 
 Control your Jandy iQPump01 variable-speed pool pump directly from Home Assistant — no third-party libraries, using the native iAquaLink/Zodiac API.
 
+This is a fork of [CLARENNE-Q/iaqualink_iqpump01](https://github.com/CLARENNE-Q/iaqualink_iqpump01) with an RPM-native, mode-select redesign. See [CHANGELOG.md](CHANGELOG.md) for what changed in 2.0.0.
+
 ## ✅ Features
 
-- Turn the pump on/off
-- Set custom target using percentage-based control with configurable manual duration
-- Return from custom/manual mode to the scheduled program with a dedicated button
+- Switch mode between auto (scheduled program), custom, and off from a single select
+- Set a custom target RPM (in the pump's native 25 RPM steps) for a duration you set from a number entity
 - Select the target iQPump01 controller when multiple pumps are linked to iAquaLink
-- Monitor current speed, power consumption, motor temperature, Wi-Fi status, etc.
-- Expose priming status as a dedicated binary sensor
-- Expose operating mode, target RPM, custom RPM, and custom speed timer sensors
+- Monitor current speed, power consumption, and motor temperature
+- Expose running and priming status as binary sensors
+- Expose target RPM, custom RPM, and custom speed timer sensors
 - Robust setup with duplicate detection, auth retry handling, and clear no-device errors
 - Configurable faster refresh after speed changes to track real RPM ramp-up
-- View advanced attributes like firmware version, priming status, min/max RPM, serial number
 - Configurable auto-refresh pump data polling
 - HACS compatible for easy installation
 
 ## 🛠 Installation via HACS (recommended)
 
+Requires Home Assistant 2024.11 or newer.
+
 1. In HACS > Integrations, click the 3-dot menu > Custom Repositories
-2. Add this repository: `https://github.com/CLARENNE-Q/iaqualink_iqpump01`
+2. Add this repository: `https://github.com/mickeyschwab/iaqualink_iqpump01`
 3. Choose category: Integration
 4. Install the integration and restart Home Assistant
 5. Go to **Settings > Devices & Services > Add Integration**, search for `iAquaLink iQPump01`
@@ -39,17 +41,25 @@ No further configuration is needed.
 
 ## 📈 Entities created
 
+Entity IDs are derived from the pump's device name, e.g.
+`select.iaqualink_iqpump01_pool_mode` for a pump named "Pool".
+
 | Entity | Description |
 |--------|-------------|
-| `switch.pump_i2d` | Turn the pump on or off |
-| `number.pump_rpm_target_percentage` | Target RPM (%) — mapped to actual RPM using min/max range |
-| `sensor.pump_power` | Power consumption (W) |
-| `sensor.pump_speed` | Current speed (RPM) |
-| `sensor.pump_operating_mode` | Operating mode (`program`, `custom`, `off`) |
-| `sensor.pump_target_rpm` | Requested target RPM |
-| `sensor.pump_custom_speed_rpm` | Custom speed RPM |
-| `sensor.pump_custom_speed_timer` | Remaining custom speed timer (seconds) |
-| ... | Additional attributes on switch.pump_i2d such as temperature, runstate, firmware, priming, max/min-speed, serial, Wi-Fi, and more |
+| Mode (select) | `auto`, `custom`, `off` (plus read-only `quick_clean`, `timed_run`, `timed_stop`, `service` while active) |
+| RPM target (number) | Target RPM — bounded by the pump's `globalrpmmin`/`globalrpmmax`, 25 RPM steps |
+| Custom speed duration (number) | How long a custom speed runs before returning to the schedule (minutes, up to 23h59) |
+| Running (binary sensor) | Whether the motor is running |
+| Priming (binary sensor) | Whether the pump is priming |
+| Power (sensor) | Power consumption (W) |
+| Speed (sensor) | Current speed (RPM) |
+| Motor temperature (sensor) | Motor temperature |
+| Target RPM (sensor) | Requested target RPM |
+| Custom speed RPM (sensor) | Custom speed RPM |
+| Custom speed time remaining (sensor) | Remaining custom speed timer (seconds, `-1` when inactive) |
+
+Firmware version and serial number appear on the device page. Raw pump state
+(redacted) is available via **Download diagnostics** on the integration.
 
 ## 🧰 Services
 

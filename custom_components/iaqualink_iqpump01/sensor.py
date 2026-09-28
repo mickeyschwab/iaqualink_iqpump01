@@ -1,107 +1,80 @@
-import logging
-from homeassistant.components.sensor import SensorEntity
-from .const import DOMAIN, OPMODE_SERVICE
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.const import REVOLUTIONS_PER_MINUTE, UnitOfPower, UnitOfTime
+
 from .entity import IAqualinkPumpEntity
+from .models import PumpState
 
-_LOGGER = logging.getLogger(__name__)
 
-FIELDS = {
-    "speed": {
-        "name": "Pump Speed",
-        "path": ("motordata", "speed"),
-        "unit": "rpm",
-        "state_class": "measurement",
-    },
-    "power": {
-        "name": "Pump Power",
-        "path": ("motordata", "power"),
-        "unit": "W",
-        "device_class": "power",
-        "state_class": "measurement",
-    },
-    "opmode": {
-        "name": "Pump Operating Mode",
-        "path": ("opmode",),
-    },
-    "rpmtarget": {
-        "name": "Pump Target RPM",
-        "path": ("rpmtarget",),
-        "unit": "rpm",
-    },
-    "customspeedrpm": {
-        "name": "Pump Custom Speed RPM",
-        "path": ("customspeedrpm",),
-        "unit": "rpm",
-    },
-    "customspeedtimer": {
-        "name": "Pump Custom Speed Timer",
-        "path": ("customspeedtimer",),
-        "unit": "s",
-    },
-}
-OPMODE_LABELS = {
-    "0": "auto",
-    "1": "custom",
-    "2": "off",
-    "3": "quick clean",
-    "4": "timed run",
-    "5": "timed stop",
-    OPMODE_SERVICE: "off",
-}
+@dataclass(frozen=True, kw_only=True)
+class PumpSensorEntityDescription(SensorEntityDescription):
+    value_fn: Callable[[PumpState], int | float | None]
+
+
+SENSORS = (
+    PumpSensorEntityDescription(
+        key="speed",
+        translation_key="speed",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_speed,
+    ),
+    PumpSensorEntityDescription(
+        key="power",
+        translation_key="power",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_power,
+    ),
+    PumpSensorEntityDescription(
+        key="temperature",
+        translation_key="motor_temperature",
+        # Unit isn't documented by iAquaLink, so no device_class/unit.
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda state: state.motor_temperature,
+    ),
+    PumpSensorEntityDescription(
+        key="rpmtarget",
+        translation_key="rpm_target_reported",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        value_fn=lambda state: state.rpm_target,
+    ),
+    PumpSensorEntityDescription(
+        key="customspeedrpm",
+        translation_key="custom_speed_rpm",
+        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
+        value_fn=lambda state: state.custom_speed_rpm,
+    ),
+    PumpSensorEntityDescription(
+        key="customspeedtimer",
+        translation_key="custom_speed_timer",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        value_fn=lambda state: state.custom_speed_timer,
+    ),
+)
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    coordinator = hass.data[DOMAIN][config_entry.entry_id]
-    sensors = [PumpSensor(coordinator, key, description) for key, description in FIELDS.items()]
-    async_add_entities(sensors)
+    coordinator = config_entry.runtime_data
+    async_add_entities(PumpSensor(coordinator, description) for description in SENSORS)
+
 
 class PumpSensor(IAqualinkPumpEntity, SensorEntity):
-    def __init__(self, coordinator, field, description):
-        super().__init__(coordinator)
-        self._field = field
-        self._description = description
-        self._attr_name = description["name"]
-        self._attr_unique_id = f"{coordinator.client.serial}_{field}"
+    entity_description: PumpSensorEntityDescription
 
-        self._attr_native_unit_of_measurement = description.get("unit")
-        self._attr_device_class = description.get("device_class")
-        self._attr_state_class = description.get("state_class")
+    def __init__(self, coordinator, description):
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._attr_unique_id = f"{coordinator.client.serial}_{description.key}"
 
     @property
     def native_value(self):
-        data = self.coordinator.data or {}
-        value = self._value_from_path(data, self._description["path"])
-        if self._field == "opmode" and value is not None:
-            return OPMODE_LABELS.get(str(value), str(value))
-        return self._coerce_number(value)
-
-    @property
-    def extra_state_attributes(self):
-        if self._field != "opmode":
-            return None
-
-        data = self.coordinator.data or {}
-        return {
-            "opmode": data.get("opmode"),
-            "runstate": data.get("runstate"),
-            "rpmtarget": data.get("rpmtarget"),
-            "customspeedrpm": data.get("customspeedrpm"),
-            "customspeedtimer": data.get("customspeedtimer"),
-        }
-
-    @staticmethod
-    def _value_from_path(data, path):
-        value = data
-        for key in path:
-            if not isinstance(value, dict):
-                return None
-            value = value.get(key)
-        return value
-
-    @staticmethod
-    def _coerce_number(value):
-        if value in (None, ""):
-            return None
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return value
+        return self.entity_description.value_fn(self.coordinator.data)

@@ -15,6 +15,13 @@
         "data": {
           "serial": "Pompe"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthentification iAquaLink",
+        "description": "iAquaLink a refuse les identifiants enregistres pour {email}. Entrez le mot de passe actuel.",
+        "data": {
+          "password": "Mot de passe"
+        }
       }
     },
     "error": {
@@ -23,20 +30,72 @@
       "no_device": "Aucun controleur iQPump01 trouve dans ce compte iAquaLink."
     },
     "abort": {
-      "already_configured": "Cet appareil est deja configure."
+      "already_configured": "Cet appareil est deja configure.",
+      "reauth_successful": "Reauthentification reussie."
     }
   },
   "options": {
     "step": {
       "init": {
         "title": "Options iAquaLink iQPump01",
-        "description": "Ajustez la duree de vitesse manuelle et le polling.",
+        "description": "Ajustez le comportement du polling.",
         "data": {
-          "custom_speed_timer_seconds": "Duree de vitesse manuelle",
           "update_interval_seconds": "Intervalle de polling normal",
           "fast_update_interval_seconds": "Intervalle de polling rapide apres changement RPM",
           "fast_refresh_duration_seconds": "Duree du polling rapide apres changement RPM"
         }
+      }
+    }
+  },
+  "entity": {
+    "select": {
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "auto": "Auto (programme)",
+          "custom": "Personnalise",
+          "off": "Arret",
+          "quick_clean": "Nettoyage rapide",
+          "timed_run": "Marche minutee",
+          "timed_stop": "Arret minute",
+          "service": "Service (controle a distance verrouille)"
+        }
+      }
+    },
+    "number": {
+      "rpm_target": {
+        "name": "Consigne RPM"
+      },
+      "custom_speed_duration": {
+        "name": "Duree de vitesse personnalisee"
+      }
+    },
+    "binary_sensor": {
+      "running": {
+        "name": "En marche"
+      },
+      "priming": {
+        "name": "Amorcage"
+      }
+    },
+    "sensor": {
+      "speed": {
+        "name": "Vitesse"
+      },
+      "power": {
+        "name": "Puissance"
+      },
+      "motor_temperature": {
+        "name": "Temperature moteur"
+      },
+      "rpm_target_reported": {
+        "name": "RPM cible"
+      },
+      "custom_speed_rpm": {
+        "name": "RPM vitesse personnalisee"
+      },
+      "custom_speed_timer": {
+        "name": "Temps restant vitesse personnalisee"
       }
     }
   }
