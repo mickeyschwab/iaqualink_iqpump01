@@ -11,7 +11,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from .api import (
     IAqualinkAuthError,
     IAqualinkClient,
-    IAqualinkCommandError,
     IAqualinkConnectionError,
     IAqualinkError,
 )
@@ -76,15 +75,13 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            return await self.hass.async_add_executor_job(self.client.refresh_data)
+            return await self.client.refresh_data()
         except IAqualinkAuthError as err:
             raise ConfigEntryAuthFailed("iAquaLink authentication failed") from err
         except IAqualinkConnectionError as err:
             raise UpdateFailed(f"Network/HTTP error communicating with iAquaLink: {err}") from err
-        except IAqualinkCommandError as err:
-            raise UpdateFailed(f"Command validation failed: {err}") from err
-        except Exception as err:
-            raise UpdateFailed(f"Unexpected error communicating with iAquaLink: {err}") from err
+        except IAqualinkError as err:
+            raise UpdateFailed(f"Unexpected iAquaLink error: {err}") from err
 
     @callback
     def enable_fast_refresh(self) -> None:
@@ -163,9 +160,6 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
                 f"{MAX_CUSTOM_SPEED_TIMER_SECONDS} seconds (23h59)."
             )
 
-        # The pump only accepts RPM targets in increments of 25.
-        rpm = int(round(rpm / 25) * 25)
-
         _LOGGER.debug(
             "[_async_write_custom_speed] %s RPM for %ss",
             rpm,
@@ -173,19 +167,7 @@ class IAqualinkPumpCoordinator(DataUpdateCoordinator):
         )
 
         try:
-            # The controller ignores custom RPM writes while running in scheduled mode
-            # (opmode=0). Switch to manual/custom speed mode before writing the target.
-            await self.hass.async_add_executor_job(
-                self.client._send_command, "/opmode/write", "value=1"
-            )
-            await self.hass.async_add_executor_job(
-                self.client._send_command, "/customspeedrpm/write", f"value={rpm}"
-            )
-            await self.hass.async_add_executor_job(
-                self.client._send_command,
-                "/customspeedtimer/write",
-                f"value={duration_seconds}",
-            )
+            await self.client.set_custom_speed(rpm, duration_seconds)
         except IAqualinkError as err:
             raise HomeAssistantError(f"Unable to set pump speed: {err}") from err
 

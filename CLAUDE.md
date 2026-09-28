@@ -37,17 +37,21 @@ they're expected to stay in sync (currently `1.0.18`).
 
 ### Data flow
 
-1. **`api.py` — `IAqualinkClient`**: thin synchronous `requests`-based client
-   (not `aiohttp`; calls are pushed to the executor via
-   `hass.async_add_executor_job`). Handles:
+1. **`api.py` — `IAqualinkClient`**: async `aiohttp` client using Home
+   Assistant's shared session (`async_get_clientsession`). It has no Home
+   Assistant imports, so it stays usable/testable on its own. Handles:
    - `login()` — POSTs to `prod.zodiac-io.com/users/v1/login`, then lists
      devices from `r-api.iaqualink.net/devices.json` and filters to
      `device_type == "i2d"` (the only supported controller family).
    - `refresh_data()` — POSTs `/alldata/read` to the per-serial control
      endpoint and stores the full state blob in `self.data`.
-   - `_send_command(command, param)` — POSTs a write command (e.g.
-     `/opmode/write` with `value=1`) and cross-checks the echoed value against
-     what was requested, raising `IAqualinkCommandError` on mismatch (iAquaLink
+   - Typed commands: `set_opmode(OpMode)` and `set_custom_speed(rpm,
+     duration_seconds)`, which owns the three-write sequence (see Key domain
+     knowledge) and rounds to the controller's 25 RPM step. Commands hold a
+     per-client `asyncio.Lock` so multi-write sequences can't interleave.
+     Nothing outside `api.py` should call `_send_command` directly.
+   - `_send_command(command, value)` — POSTs a write and cross-checks the
+     echoed value, raising `IAqualinkCommandError` on mismatch (iAquaLink
      sometimes silently ignores writes — see Field Notes below).
    - All responses are redacted before logging (`_redact_for_log`) — emails,
      tokens, SSIDs, serials, etc. Preserve this when touching logging code;
@@ -68,8 +72,8 @@ they're expected to stay in sync (currently `1.0.18`).
    *control* logic — `raise_if_service_mode()`,
    `async_set_custom_speed_rpm(rpm, duration)` (range-validating entry point,
    used by both the number entity and the service), and
-   `_async_write_custom_speed(rpm, duration)` for the actual three-write
-   sequence — rather than the entities, since this logic is
+   `_async_write_custom_speed(rpm, duration)`, which applies the service-mode
+   guard, calls the client, and kicks off fast refresh — rather than the entities, since this logic is
    per-device, not per-entity; see point 4.
 
 3. **`entity.py` — `IAqualinkPumpEntity`** (base `CoordinatorEntity`): shared
@@ -82,10 +86,10 @@ they're expected to stay in sync (currently `1.0.18`).
 4. **Platforms** (`switch.py`, `number.py`, `sensor.py`, `button.py`,
    `binary_sensor.py`): each reads from `coordinator.data` (the raw
    `alldata` dict); writes go through the coordinator rather than calling
-   `client._send_command` directly (see `number.py`'s `async_set_value`,
-   which just calls `coordinator.async_set_custom_speed_rpm()`). Simple on/off
-   writes (`switch.py`, `button.py`) still call `client._send_command`
-   directly since they don't share logic with anything else. There is exactly
+   the client directly (see `number.py`'s `async_set_value`, which just calls
+   `coordinator.async_set_custom_speed_rpm()`). Simple mode writes
+   (`switch.py`, `button.py`) call `client.set_opmode()` directly since they
+   don't share logic with anything else. There is exactly
    one entity per platform today (single switch, single number, one button,
    one binary sensor) — `sensor.py` is the one platform with multiple
    entities, defined declaratively via the `FIELDS` dict (path into `alldata`,
@@ -123,7 +127,7 @@ they're expected to stay in sync (currently `1.0.18`).
 - Setting a custom RPM requires **three sequential writes**: `opmode=1`, then
   `customspeedrpm`, then `customspeedtimer` — writing RPM directly while in
   scheduled mode is ignored by the controller. This sequence lives in
-  `coordinator.py`'s `_async_write_custom_speed()`; don't collapse or reorder
+  `api.py`'s `IAqualinkClient.set_custom_speed()`; don't collapse or reorder
   it.
 - Speed is RPM everywhere — the integration deliberately never uses a
   percentage (an earlier 0–100% number drifted on round-trips). The number
@@ -132,10 +136,10 @@ they're expected to stay in sync (currently `1.0.18`).
 - Priming is inferred as `primingtimer >= 0` (a timer value of `-1` means
   inactive) — the same "`-1` = inactive" convention applies to
   `customspeedtimer`.
-- `docs/AUDIT_RECOMMENDATIONS.md` records known technical debt (sync
-  `requests` vs `aiohttp`, hardcoded headers, partial command-ack validation,
-  broad `except Exception` in the coordinator) — check it before making
-  related changes, since it documents deliberate tradeoffs as well as gaps.
+- `docs/AUDIT_RECOMMENDATIONS.md` is a dated (2026-05) audit of known
+  technical debt (hardcoded headers, partial command-ack validation). Its
+  `requests` → `aiohttp` and broad `except Exception` items have since been
+  addressed; check it before making related changes.
 
 ### Translations
 

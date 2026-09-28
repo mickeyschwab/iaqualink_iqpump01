@@ -296,8 +296,8 @@ Changing options reloads the integration so the coordinator uses the new values.
 
 Implementation decisions:
 
-- All `requests` calls should use a timeout.
-- HTTP errors should call `raise_for_status()`.
+- All HTTP calls use a 15s `aiohttp.ClientTimeout`.
+- HTTP error statuses are checked (`_raise_for_status`) before parsing.
 - `401` and `403` should map to authentication errors.
 - Connection/timeouts should map to retryable setup/update errors.
 - Login failures should become `ConfigEntryAuthFailed`.
