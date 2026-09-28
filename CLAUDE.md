@@ -29,9 +29,11 @@ python3 -m json.tool hacs.json > /dev/null
 python3 -m json.tool custom_components/iaqualink_iqpump01/manifest.json > /dev/null
 ```
 
-Bump the version in **both** `hacs.json` and
-`custom_components/iaqualink_iqpump01/manifest.json` together when releasing —
-they're expected to stay in sync (currently `2.0.0`).
+When releasing, bump `version` in
+`custom_components/iaqualink_iqpump01/manifest.json` (currently `2.0.0`) and
+the README badge. `hacs.json` deliberately has no version: HACS only reads a
+few keys from it (`name`, `render_readme`, `homeassistant`, ...) and takes the
+version from the manifest and GitHub releases.
 
 ## Architecture
 
