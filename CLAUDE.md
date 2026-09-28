@@ -98,7 +98,9 @@ they're expected to stay in sync (currently `1.0.18`).
 5. **`config_flow.py`**: login step → if the account has more than one `i2d`
    device, a `select_pump` step lets the user pick a `serial_number`, which
    becomes the config entry's `unique_id` (duplicate entries are blocked via
-   `_abort_if_unique_id_configured`). The options flow tunes the four polling
+   `_abort_if_unique_id_configured`). A `reauth_confirm` step handles
+   `ConfigEntryAuthFailed` (raised by setup and the coordinator on 401/403)
+   by asking for the current password and reloading the entry. The options flow tunes the four polling
    knobs in `const.py` (custom speed timer, normal interval, fast interval,
    fast duration) and triggers a reload on change.
 

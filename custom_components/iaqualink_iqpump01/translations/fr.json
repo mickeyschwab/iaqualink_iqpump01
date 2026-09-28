@@ -15,6 +15,13 @@
         "data": {
           "serial": "Pompe"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthentification iAquaLink",
+        "description": "iAquaLink a refuse les identifiants enregistres pour {email}. Entrez le mot de passe actuel.",
+        "data": {
+          "password": "Mot de passe"
+        }
       }
     },
     "error": {
@@ -23,7 +30,8 @@
       "no_device": "Aucun controleur iQPump01 trouve dans ce compte iAquaLink."
     },
     "abort": {
-      "already_configured": "Cet appareil est deja configure."
+      "already_configured": "Cet appareil est deja configure.",
+      "reauth_successful": "Reauthentification reussie."
     }
   },
   "options": {
