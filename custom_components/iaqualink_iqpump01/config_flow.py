@@ -228,6 +228,39 @@ class AqualinkConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=self._select_pump_schema(),
         )
 
+    async def async_step_reauth(self, entry_data):
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        entry = self._get_reauth_entry()
+        errors = {}
+        if user_input is not None:
+            client = IAqualinkClient(
+                async_get_clientsession(self.hass),
+                entry.data["email"],
+                user_input["password"],
+                entry.data.get(CONF_SERIAL),
+            )
+            try:
+                await client.login()
+            except IAqualinkAuthError:
+                errors["base"] = "invalid_auth"
+            except IAqualinkNoDeviceError:
+                errors["base"] = "no_device"
+            except IAqualinkConnectionError:
+                errors["base"] = "cannot_connect"
+            else:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={"password": user_input["password"]}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required("password"): str}),
+            description_placeholders={"email": entry.data["email"]},
+            errors=errors,
+        )
+
 
 class AqualinkOptionsFlow(config_entries.OptionsFlow):
     def __init__(self, config_entry):

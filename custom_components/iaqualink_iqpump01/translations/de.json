@@ -15,6 +15,13 @@
         "data": {
           "serial": "Pump"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate iAquaLink",
+        "description": "iAquaLink rejected the saved credentials for {email}. Enter the current password.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -23,7 +30,8 @@
       "no_device": "No iQPump01 controller was found in this iAquaLink account."
     },
     "abort": {
-      "already_configured": "This device is already configured."
+      "already_configured": "This device is already configured.",
+      "reauth_successful": "Reauthentication was successful."
     }
   },
   "options": {
