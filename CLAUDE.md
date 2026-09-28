@@ -133,8 +133,11 @@ oldest release the test suite has been run against — it's needed for
    `IAqualinkConfigEntry`; there's no `hass.data[DOMAIN]`), forwards to all
    `PLATFORMS`, and on unload calls `coordinator.async_shutdown()` to cancel
    the fast-refresh timer. `async_setup()` also registers the
-   `iaqualink_iqpump01.set_custom_speed` domain-level service (`services.yaml`,
-   target: `device_id`, field `rpm`), which lets one call set a raw RPM target
+   `iaqualink_iqpump01.set_custom_speed` domain-level service (`services.yaml`
+   fields `device_id`, `rpm`, `duration`; `device_id` is a field with a
+   device selector, not a `target`, because HA doesn't allow device filters on
+   service targets — `target: device_id:` in YAML still works since HA merges
+   target into the call data), which lets one call set a raw RPM target
    *and* a duration together in a single call, independent of the duration
    entity. The
    handler resolves each targeted `device_id` via

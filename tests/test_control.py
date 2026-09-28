@@ -35,6 +35,13 @@ async def test_service_rpm_and_duration(hass, entry, pump):
         blocking=True,
     )
     assert pump.writes == [("opmode", "1"), ("customspeedrpm", "3000"), ("customspeedtimer", "5400")]
+    # Pre-2.0 YAML used `target: device_id:`; HA merges target into the data.
+    pump.writes.clear()
+    await hass.services.async_call(
+        DOMAIN, "set_custom_speed", {"rpm": 1500, "duration": {"minutes": 30}},
+        blocking=True, target={"device_id": device.id},
+    )
+    assert pump.writes == [("opmode", "1"), ("customspeedrpm", "1500"), ("customspeedtimer", "1800")]
     with pytest.raises(HomeAssistantError):
         await hass.services.async_call(
             DOMAIN, "set_custom_speed",
