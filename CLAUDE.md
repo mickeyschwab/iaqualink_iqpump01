@@ -100,17 +100,22 @@ they're expected to stay in sync (currently `1.0.18`).
    becomes the config entry's `unique_id` (duplicate entries are blocked via
    `_abort_if_unique_id_configured`). A `reauth_confirm` step handles
    `ConfigEntryAuthFailed` (raised by setup and the coordinator on 401/403)
-   by asking for the current password and reloading the entry. The options flow tunes the four polling
-   knobs in `const.py` (custom speed timer, normal interval, fast interval,
-   fast duration) and triggers a reload on change.
+   by asking for the current password and reloading the entry. The options
+   flow tunes the three polling knobs in `const.py` (normal interval, fast
+   interval, fast duration) and triggers a reload on change. The custom speed
+   duration is *not* an option: it's a `RestoreNumber` config entity in
+   `number.py` (minutes, 1–1439) that writes
+   `coordinator.custom_speed_duration_seconds`, so it can change at runtime
+   without a reload. The legacy `custom_speed_timer_seconds` option only
+   seeds its first value.
 
 6. **`__init__.py`**: sets up the client, coordinator, forwards to all
    `PLATFORMS`, and on unload calls `coordinator.async_shutdown()` to cancel
    the fast-refresh timer. `async_setup()` also registers the
    `iaqualink_iqpump01.set_custom_speed` domain-level service (`services.yaml`,
    target: `device_id`, field `rpm`), which lets one call set a raw RPM target
-   *and* an arbitrary duration together — the number entity's plain
-   `async_set_value` only ever uses the options-flow preset duration. The
+   *and* a duration together in a single call, independent of the duration
+   entity. The
    handler resolves each targeted `device_id` via
    `IAqualinkPumpCoordinator.async_get_by_device_id()` (a reusable
    classmethod, not one-off logic — the resolution belongs on the coordinator

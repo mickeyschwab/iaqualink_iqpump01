@@ -6,12 +6,9 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 from .const import (
     CONF_SERIAL,
-    CONF_CUSTOM_SPEED_TIMER_SECONDS,
     CONF_FAST_REFRESH_DURATION_SECONDS,
     CONF_FAST_UPDATE_INTERVAL_SECONDS,
     CONF_UPDATE_INTERVAL_SECONDS,
-    CUSTOM_SPEED_TIMER_OPTIONS,
-    DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
     DEFAULT_FAST_REFRESH_DURATION_SECONDS,
     DEFAULT_FAST_UPDATE_INTERVAL_SECONDS,
     DEFAULT_UPDATE_INTERVAL_SECONDS,
@@ -28,7 +25,6 @@ from .api import (
 _LOGGER = logging.getLogger(__name__)
 
 OPTION_INT_KEYS = (
-    CONF_CUSTOM_SPEED_TIMER_SECONDS,
     CONF_UPDATE_INTERVAL_SECONDS,
     CONF_FAST_UPDATE_INTERVAL_SECONDS,
     CONF_FAST_REFRESH_DURATION_SECONDS,
@@ -37,22 +33,6 @@ OPTION_INT_KEYS = (
 
 def _options_schema(options):
     return vol.Schema({
-        vol.Required(
-            CONF_CUSTOM_SPEED_TIMER_SECONDS,
-            default=str(option_int(
-                options,
-                CONF_CUSTOM_SPEED_TIMER_SECONDS,
-                DEFAULT_CUSTOM_SPEED_TIMER_SECONDS,
-            )),
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[
-                    selector.SelectOptionDict(value=str(value), label=label)
-                    for value, label in CUSTOM_SPEED_TIMER_OPTIONS.items()
-                ],
-                mode=selector.SelectSelectorMode.DROPDOWN,
-            )
-        ),
         vol.Required(
             CONF_UPDATE_INTERVAL_SECONDS,
             default=option_int(

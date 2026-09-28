@@ -152,15 +152,9 @@ Custom speed timer:
 - `customspeedtimer=-1`: no active custom speed timer.
 - `customspeedtimer>=0`: active custom speed timer.
 
-Supported configurable manual speed durations in the integration:
-
-- `30 min`
-- `1 h`
-- `6 h`
-- `12 h`
-- `23 h 59`
-
-The iAquaLink mobile app appears to allow up to approximately `23 h 59`.
+The integration's custom speed duration is a Home Assistant number entity in
+minutes (`1`–`1439`, default 6 h), restored across restarts. The iAquaLink
+mobile app appears to allow up to approximately `23 h 59`, so that's the cap.
 
 ## Priming
 
@@ -250,9 +244,9 @@ user customizations.
 `iaqualink_iqpump01.set_custom_speed` is a domain-level service (registered in
 `__init__.py`'s `async_setup`, not tied to any single entity platform) that
 sets a custom RPM target for a specific duration in one call, matching the
-"set X rpm for X time" control in the iAquaLink app. The `number` entity's
-`async_set_value` always uses the options-flow preset duration; this service
-is the only way to set an RPM and an arbitrary duration together.
+"set X rpm for X time" control in the iAquaLink app. The RPM number
+entity and selecting `custom` mode use the custom speed duration entity; this
+service takes its own duration instead, so one call can set both.
 
 - Fields: `rpm` (raw RPM, matching what the iAquaLink app displays) and
   `duration` (HA duration selector, day component disabled).
@@ -293,7 +287,6 @@ Config flow behavior:
 
 Options flow exposes:
 
-- Manual/custom speed timer duration.
 - Normal polling interval.
 - Fast polling interval after RPM change.
 - Fast polling duration after RPM change.
