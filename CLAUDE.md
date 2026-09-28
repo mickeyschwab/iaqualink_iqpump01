@@ -33,7 +33,10 @@ When releasing, bump `version` in
 `custom_components/iaqualink_iqpump01/manifest.json` (currently `2.0.0`) and
 the README badge. `hacs.json` deliberately has no version: HACS only reads a
 few keys from it (`name`, `render_readme`, `homeassistant`, ...) and takes the
-version from the manifest and GitHub releases.
+version from the manifest and GitHub releases. `hacs.json`'s
+`homeassistant` key is the minimum supported HA version (`2024.11.0`, the
+oldest release the test suite has been run against — it's needed for
+`_get_reauth_entry` and `async_update_reload_and_abort(data_updates=...)`).
 
 ## Architecture
 
