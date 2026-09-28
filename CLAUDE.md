@@ -113,7 +113,13 @@ version from the manifest and GitHub releases.
    `number.py` (minutes, 1–1439) that writes
    `coordinator.custom_speed_duration_seconds`, so it can change at runtime
    without a reload. The legacy `custom_speed_timer_seconds` option only
-   seeds its first value.
+   seeds its first value, which is why the migration below keeps it.
+
+   Config entries are `VERSION = 2`. `async_migrate_entry` in `__init__.py`
+   upgrades 1.x entries by removing registry entries for entities deleted in
+   2.0.0 (`REMOVED_ENTITIES`) and refuses unknown future versions. Any change
+   that removes entities or reshapes entry data/options should bump the
+   version and add a migration step there.
 
 6. **`__init__.py`**: sets up the client and coordinator, stores the
    coordinator as `entry.runtime_data` (entries are typed

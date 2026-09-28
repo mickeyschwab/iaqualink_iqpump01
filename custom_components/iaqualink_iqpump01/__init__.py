@@ -4,7 +4,7 @@ import voluptuous as vol
 from homeassistant.const import ATTR_DEVICE_ID
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady, HomeAssistantError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .const import CONF_SERIAL, DOMAIN, SERVICE_SET_CUSTOM_SPEED
 from .api import (
@@ -52,6 +52,36 @@ async def async_setup(hass: HomeAssistant, config: dict):
         schema=SET_CUSTOM_SPEED_SCHEMA,
     )
     return True
+
+# Entities removed in 2.0.0, as (platform, unique_id suffix after the serial).
+REMOVED_ENTITIES = (
+    ("switch", "_pump_i2d"),
+    ("button", "_return_to_program"),
+    ("number", "_rpm_percentage"),
+    ("sensor", "_opmode"),
+)
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: IAqualinkConfigEntry):
+    if entry.version > 2:
+        # Downgrade from a newer, unknown schema.
+        return False
+
+    if entry.version == 1:
+        # 1.x -> 2.0.0: drop registry entries for entities that no longer
+        # exist, so they don't linger as "unavailable".
+        registry = er.async_get(hass)
+        for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+            if any(
+                reg_entry.domain == platform and reg_entry.unique_id.endswith(suffix)
+                for platform, suffix in REMOVED_ENTITIES
+            ):
+                _LOGGER.info("Removing entity %s (removed in 2.0.0)", reg_entry.entity_id)
+                registry.async_remove(reg_entry.entity_id)
+        hass.config_entries.async_update_entry(entry, version=2)
+
+    return True
+
 
 async def async_options_update_listener(hass: HomeAssistant, entry: IAqualinkConfigEntry):
     await hass.config_entries.async_reload(entry.entry_id)
