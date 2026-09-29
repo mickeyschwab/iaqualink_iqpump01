@@ -8,8 +8,8 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
@@ -20,7 +20,7 @@ jobs:
   hassfest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
@@ -29,5 +29,8 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # Only needed for inclusion in the default HACS store.
-          ignore: brands
+          # brands: only needed for inclusion in the default HACS store.
+          # license: upstream (CLARENNE-Q/iaqualink_iqpump01) has no license,
+          # and a fork can't grant one for code it didn't write. Remove this
+          # once upstream adds a license and it's carried over here.
+          ignore: brands license
