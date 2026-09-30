@@ -34,7 +34,7 @@ version); bump it deliberately. `manifest.json` keys must stay sorted
 (`domain`, `name`, then alphabetical) or `hassfest` fails.
 
 When releasing, bump `version` in
-`custom_components/iaqualink_iqpump01/manifest.json` (currently `2.0.0`) and
+`custom_components/iaqualink_iqpump01/manifest.json` (currently `2.0.1`) and
 the README badge. `hacs.json` deliberately has no version: HACS only reads a
 few keys from it (`name`, `render_readme`, `homeassistant`, ...) and takes the
 version from the manifest and GitHub releases. `hacs.json`'s
@@ -123,7 +123,7 @@ oldest release the test suite has been run against — it's needed for
    Duration is deliberately *not* an entity. It's an argument to "run at this
    speed", like `transition` on `light.turn_on`, not pump state. A persistent
    entity made setting order matter and did nothing when changed mid-run. The
-   RPM number and `custom` mode use the options default
+   custom speed number and `custom` mode use the options default
    (`coordinator.default_custom_speed_duration()`); `set_custom_speed` takes
    an explicit duration.
 

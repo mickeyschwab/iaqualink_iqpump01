@@ -7,7 +7,12 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import REVOLUTIONS_PER_MINUTE, UnitOfPower, UnitOfTime
+from homeassistant.const import (
+    REVOLUTIONS_PER_MINUTE,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 
 from .entity import IAqualinkPumpEntity
 from .models import PumpState
@@ -37,26 +42,18 @@ SENSORS = (
     PumpSensorEntityDescription(
         key="temperature",
         translation_key="motor_temperature",
-        # Unit isn't documented by iAquaLink, so no device_class/unit.
+        # iAquaLink doesn't document the unit; observed values (~30) are
+        # Celsius. Declaring it lets HA convert for imperial users.
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda state: state.motor_temperature,
-    ),
-    PumpSensorEntityDescription(
-        key="rpmtarget",
-        translation_key="rpm_target_reported",
-        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
-        value_fn=lambda state: state.rpm_target,
-    ),
-    PumpSensorEntityDescription(
-        key="customspeedrpm",
-        translation_key="custom_speed_rpm",
-        native_unit_of_measurement=REVOLUTIONS_PER_MINUTE,
-        value_fn=lambda state: state.custom_speed_rpm,
     ),
     PumpSensorEntityDescription(
         key="customspeedtimer",
         translation_key="custom_speed_timer",
         native_unit_of_measurement=UnitOfTime.SECONDS,
+        device_class=SensorDeviceClass.DURATION,
         value_fn=lambda state: state.custom_speed_timer,
     ),
 )

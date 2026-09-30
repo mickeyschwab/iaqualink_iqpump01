@@ -1,5 +1,5 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01)
-![version](https://img.shields.io/badge/version-2.0.0-blue)
+![version](https://img.shields.io/badge/version-2.0.1-blue)
 [![CI](https://github.com/mickeyschwab/iaqualink_iqpump01/actions/workflows/ci.yml/badge.svg)](https://github.com/mickeyschwab/iaqualink_iqpump01/actions/workflows/ci.yml)
 
 # iAquaLink iQPump01
@@ -24,8 +24,8 @@ through the native iAquaLink cloud API, with no third-party pool libraries.
   the iAquaLink app shows it.
 - **`set_custom_speed` action** to run a given RPM for a given duration in
   one call, for automations and scripts.
-- Sensors for speed, power, motor temperature, target and custom RPM, and
-  time remaining on a custom speed.
+- Sensors for actual speed, power, motor temperature, and time remaining on
+  a custom speed.
 - Running and priming binary sensors.
 - Faster polling for a few minutes after a change, so you can watch the motor
   ramp up.
@@ -80,7 +80,7 @@ each additional pump.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| Default custom speed duration | 6 h (360 min) | How long a custom speed runs when set from the RPM target or by selecting `custom`, before the pump returns to its schedule. 1 min to 23 h 59. |
+| Default custom speed duration | 6 h (360 min) | How long a custom speed runs when set from the Custom speed number or by selecting `custom`, before the pump returns to its schedule. 1 min to 23 h 59. |
 | Normal polling interval | 60 s | How often pump state is read (15–300 s). |
 | Fast polling interval | 10 s | Polling interval right after a speed or mode change (5–60 s). |
 | Fast polling duration | 180 s | How long fast polling lasts after a change (30–600 s). |
@@ -96,21 +96,19 @@ Entity IDs are derived from the pump's device name, e.g.
 | Entity | Description |
 |--------|-------------|
 | Mode (select) | `auto`, `custom`, `off`. While the pump is in quick clean, timed run, timed stop, or service mode, that mode is shown too, but it can't be selected remotely. |
-| RPM target (number) | Sets a custom speed in RPM for the default duration. Bounded by the pump's own minimum and maximum. |
+| Custom speed (number) | The saved custom speed in RPM. Setting it switches the pump to `custom` at that speed for the default duration. Bounded by the pump's own minimum and maximum. |
 | Running (binary sensor) | Whether the motor is running. |
 | Priming (binary sensor) | Whether the pump is priming, with priming timer, period, and RPM as attributes. |
-| Speed (sensor) | Actual motor speed (RPM). Lags behind the target while ramping. |
+| Actual speed (sensor) | Actual motor speed (RPM). Lags behind the custom speed while ramping. |
 | Power (sensor) | Power draw (W). |
 | Motor temperature (sensor) | Motor temperature as reported by the pump. |
-| Target RPM (sensor) | The speed the pump is currently aiming for. |
-| Custom speed RPM (sensor) | The saved custom speed. |
 | Custom speed time remaining (sensor) | Seconds left on the current custom speed; `-1` when none is running. |
 
 Firmware version and serial number are shown on the device page.
 
 ## Controlling the pump
 
-**From a dashboard**, add the Mode select and the RPM target. Setting an RPM
+**From a dashboard**, add the Mode select and the Custom speed. Setting an RPM
 runs that speed for the default duration from the options, then the pump
 returns to its schedule. Selecting `custom` resumes the saved custom speed for
 the same default duration.

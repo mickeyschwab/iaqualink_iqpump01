@@ -73,7 +73,7 @@ async def test_entity_naming_and_device(hass, entry):
     assert mode == "select.iaqualink_iqpump01_pool_mode"
     st = hass.states.get(mode)
     assert st.attributes["friendly_name"] == "iAquaLink iQPump01 Pool Mode"
-    assert hass.states.get(entity_id(hass, "sensor", "rpmtarget")).attributes["friendly_name"] == "iAquaLink iQPump01 Pool Target RPM"
+    assert hass.states.get(entity_id(hass, "number", "rpm_target")).attributes["friendly_name"] == "iAquaLink iQPump01 Pool Custom speed"
     device = dr.async_get(hass).async_get_device({(DOMAIN, SERIAL)})
     assert device.sw_version == "1.2"
     assert device.serial_number == SERIAL

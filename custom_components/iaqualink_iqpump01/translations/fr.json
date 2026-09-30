@@ -67,8 +67,8 @@
       }
     },
     "number": {
-      "rpm_target": {
-        "name": "Consigne RPM"
+      "custom_speed": {
+        "name": "Vitesse personnalisee"
       }
     },
     "binary_sensor": {
@@ -81,19 +81,13 @@
     },
     "sensor": {
       "speed": {
-        "name": "Vitesse"
+        "name": "Vitesse reelle"
       },
       "power": {
         "name": "Puissance"
       },
       "motor_temperature": {
         "name": "Temperature moteur"
-      },
-      "rpm_target_reported": {
-        "name": "RPM cible"
-      },
-      "custom_speed_rpm": {
-        "name": "RPM vitesse personnalisee"
       },
       "custom_speed_timer": {
         "name": "Temps restant vitesse personnalisee"

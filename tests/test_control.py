@@ -14,7 +14,8 @@ async def test_setup_and_rpm_number(hass, entry, pump):
     assert entry.state is ConfigEntryState.LOADED
     number = entity_id(hass, "number", "rpm_target")
     st = hass.states.get(number)
-    assert st.state == "1975"
+    # Shows the saved custom speed, not the schedule's rpmtarget (1975).
+    assert st.state == "2000"
     assert st.attributes["min"] == 600
     assert st.attributes["max"] == 3450
     assert st.attributes["step"] == 25

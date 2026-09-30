@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.0.1
+
+- The **RPM target** number is now **Custom speed** and shows the saved
+  custom speed (`customspeedrpm`) instead of `rpmtarget`, which in `auto`
+  follows the schedule. Its entity ID is unchanged.
+- Removed the **Target RPM** and **Custom speed RPM** sensors; they duplicated
+  the number. The **Speed** sensor is renamed **Actual speed**. The old sensors
+  aren't removed from the registry automatically, so delete them by hand.
+- **Motor temperature** is now a temperature sensor in °C, so Home Assistant
+  converts it to your unit system. **Custom speed time remaining** is now a
+  duration sensor.
+
 ## 2.0.0
 
 A redesign of how the pump is modeled in Home Assistant: speed is always in
